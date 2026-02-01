@@ -159,9 +159,18 @@ void CKURSACHApp::OnParametrs()
 			pDoc->GetHalfCouplingParams(execution, variant);
 
 			// Устанавливаем текущие значения в диалоге
-			// (предполагается, что dlg имеет методы SetExecution и SetVariant)
 			dlg.SetExecution(execution);
 			dlg.SetVariant(variant);
+
+			// Устанавливаем документ в диалоге
+			dlg.SetDocument(pDoc);
+
+			// Получаем текущие данные и устанавливаем их в диалог
+			std::vector<double> currentData = pDoc->GetHalfCouplingData(execution, variant);
+			if (!currentData.empty())
+			{
+				dlg.SetDocumentData(currentData);
+			}
 		}
 	}
 
@@ -179,6 +188,7 @@ void CKURSACHApp::OnParametrs()
 		}
 	}
 }
+
 
 void CKURSACHApp::OnSborka()
 {

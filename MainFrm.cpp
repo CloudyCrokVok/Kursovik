@@ -122,6 +122,9 @@ void CMainFrame::OnParametrs()
 		dlg.SetExecution(execution);
 		dlg.SetVariant(variant);
 
+		// Устанавливаем документ в диалоге
+		dlg.SetDocument(pDoc);
+
 		// Получаем текущие данные и устанавливаем их в диалог
 		std::vector<double> currentData = pDoc->GetHalfCouplingData(execution, variant);
 		if (!currentData.empty())
@@ -147,6 +150,7 @@ void CMainFrame::OnParametrs()
 		}
 	}
 }
+
 
 void CMainFrame::OnSborka()
 {

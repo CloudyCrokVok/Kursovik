@@ -2,6 +2,9 @@
 #include "afxdialogex.h"
 #include <vector>
 
+// Предварительное объявление класса документа
+class CKURSACHDoc;
+
 // CObjectsDlg dialog
 class CObjectsDlg : public CDialogEx
 {
@@ -32,6 +35,9 @@ public:
 	// Данные из документа
 	void SetDocumentData(const std::vector<double>& data);
 
+	// Установка указателя на документ
+	void SetDocument(CKURSACHDoc* pDoc) { m_pDoc = pDoc; }
+
 	CComboBox m_comboExecution;
 	CComboBox m_comboVariant;
 
@@ -43,6 +49,7 @@ private:
 	int m_selectedExecution;
 	int m_selectedVariant;
 	std::vector<double> m_currentData;
+	CKURSACHDoc* m_pDoc;  // Указатель на документ для получения данных
 
 	// Указатели на поля для отображения данных
 	CEdit* m_editM;
@@ -51,7 +58,6 @@ private:
 	CEdit* m_editH;
 	CEdit* m_editD1;
 	CEdit* m_editMass;
-	CEdit* m_editD0;
 	CEdit* m_editD0Val;
 	CEdit* m_editD1Val;
 	CEdit* m_editL;
@@ -59,7 +65,14 @@ private:
 	CEdit* m_editL2;
 	CEdit* m_editDParam;
 	CEdit* m_editR;
+	CEdit* m_editD2;
+	CEdit* m_editN;
+	CEdit* m_editD4;
+	CEdit* m_editN3;
+	CEdit* m_editExecVal;
 
 	// Обновление отображаемых данных
 	void UpdateDisplayedData();
+	// Обновление данных из документа
+	void UpdateDataFromDocument();
 };

@@ -3,6 +3,7 @@
 #include "KURSACH.h"
 #include "CObjectsDlg.h"
 #include "afxdialogex.h"
+#include "KURSACHDoc.h"  // ƒобавл€ем include дл€ документа
 
 // CObjectsDlg dialog
 IMPLEMENT_DYNAMIC(CObjectsDlg, CDialogEx)
@@ -17,6 +18,19 @@ CObjectsDlg::CObjectsDlg(CWnd* pParent /*=nullptr*/)
 	, m_editH(nullptr)
 	, m_editD1(nullptr)
 	, m_editMass(nullptr)
+	, m_editD0Val(nullptr)
+	, m_editD1Val(nullptr)
+	, m_editL(nullptr)
+	, m_editL1(nullptr)
+	, m_editL2(nullptr)
+	, m_editDParam(nullptr)
+	, m_editR(nullptr)
+	, m_editD2(nullptr)
+	, m_editN(nullptr)
+	, m_editD4(nullptr)
+	, m_editN3(nullptr)
+	, m_editExecVal(nullptr)
+	, m_pDoc(nullptr)
 {
 }
 
@@ -48,6 +62,18 @@ BOOL CObjectsDlg::OnInitDialog()
 	m_editH = (CEdit*)GetDlgItem(IDC_EDIT_H);
 	m_editD1 = (CEdit*)GetDlgItem(IDC_EDIT_D1);
 	m_editMass = (CEdit*)GetDlgItem(IDC_EDIT_MASS);
+	m_editD0Val = (CEdit*)GetDlgItem(IDC_EDIT_D0);
+	m_editD1Val = (CEdit*)GetDlgItem(IDC_EDIT_D1_VAL);
+	m_editL = (CEdit*)GetDlgItem(IDC_EDIT_L);
+	m_editL1 = (CEdit*)GetDlgItem(IDC_EDIT_L1);
+	m_editL2 = (CEdit*)GetDlgItem(IDC_EDIT_L2);
+	m_editDParam = (CEdit*)GetDlgItem(IDC_EDIT_D_PARAM);
+	m_editR = (CEdit*)GetDlgItem(IDC_EDIT_R);
+	m_editD2 = (CEdit*)GetDlgItem(IDC_EDIT_D2);
+	m_editN = (CEdit*)GetDlgItem(IDC_EDIT_N);
+	m_editD4 = (CEdit*)GetDlgItem(IDC_EDIT_D4);
+	m_editN3 = (CEdit*)GetDlgItem(IDC_EDIT_N3);
+	m_editExecVal = (CEdit*)GetDlgItem(IDC_EDIT_EXEC);
 
 	// ƒелаем пол€ только дл€ чтени€
 	if (m_editM) m_editM->SetReadOnly(TRUE);
@@ -56,6 +82,18 @@ BOOL CObjectsDlg::OnInitDialog()
 	if (m_editH) m_editH->SetReadOnly(TRUE);
 	if (m_editD1) m_editD1->SetReadOnly(TRUE);
 	if (m_editMass) m_editMass->SetReadOnly(TRUE);
+	if (m_editD0Val) m_editD0Val->SetReadOnly(TRUE);
+	if (m_editD1Val) m_editD1Val->SetReadOnly(TRUE);
+	if (m_editL) m_editL->SetReadOnly(TRUE);
+	if (m_editL1) m_editL1->SetReadOnly(TRUE);
+	if (m_editL2) m_editL2->SetReadOnly(TRUE);
+	if (m_editDParam) m_editDParam->SetReadOnly(TRUE);
+	if (m_editR) m_editR->SetReadOnly(TRUE);
+	if (m_editD2) m_editD2->SetReadOnly(TRUE);
+	if (m_editN) m_editN->SetReadOnly(TRUE);
+	if (m_editD4) m_editD4->SetReadOnly(TRUE);
+	if (m_editN3) m_editN3->SetReadOnly(TRUE);
+	if (m_editExecVal) m_editExecVal->SetReadOnly(TRUE);
 
 	// «аполн€ем комбобокс исполнений (7 вариантов по возрастанию)
 	m_comboExecution.AddString(_T("16"));
@@ -91,8 +129,8 @@ BOOL CObjectsDlg::OnInitDialog()
 		m_selectedVariant = 0;
 	}
 
-	// ќбновл€ем отображаемые данные
-	UpdateDisplayedData();
+	// ќбновл€ем отображаемые данные из документа
+	UpdateDataFromDocument();
 
 	return TRUE;
 }
@@ -110,7 +148,7 @@ void CObjectsDlg::OnCbnSelchangeCombo1()
 	m_selectedVariant = 0;
 
 	// ќбновл€ем отображаемые данные
-	UpdateDisplayedData();
+	UpdateDataFromDocument();
 }
 
 void CObjectsDlg::OnCbnSelchangeCombo2()
@@ -118,7 +156,7 @@ void CObjectsDlg::OnCbnSelchangeCombo2()
 	m_selectedVariant = m_comboVariant.GetCurSel();
 
 	// ќбновл€ем отображаемые данные
-	UpdateDisplayedData();
+	UpdateDataFromDocument();
 }
 
 void CObjectsDlg::SetExecution(int execution)
@@ -168,6 +206,16 @@ void CObjectsDlg::SetDocumentData(const std::vector<double>& data)
 	UpdateDisplayedData();
 }
 
+void CObjectsDlg::UpdateDataFromDocument()
+{
+	if (m_pDoc)
+	{
+		// ѕолучаем данные дл€ текущих выбранных параметров
+		std::vector<double> newData = m_pDoc->GetHalfCouplingData(GetExecution(), GetVariant());
+		SetDocumentData(newData);
+	}
+}
+
 void CObjectsDlg::UpdateDisplayedData()
 {
 	if (m_currentData.size() >= 23)  // ” нас 23 параметра
@@ -184,7 +232,7 @@ void CObjectsDlg::UpdateDisplayedData()
 
 		// exec (исполнение)
 		strValue.Format(_T("%.0f"), m_currentData[2]);
-		// ≈сли нужно отобразить exec
+		if (m_editExecVal) m_editExecVal->SetWindowText(strValue);
 
 		// B
 		strValue.Format(_T("%.0f"), m_currentData[3]);
@@ -197,19 +245,19 @@ void CObjectsDlg::UpdateDisplayedData()
 			strValue = _T("N/A");
 		if (m_editH) m_editH->SetWindowText(strValue);
 
-		// h_dev
+		// h_dev (не отображаем)
 		// m_currentData[5]
 
-		// b1_num
+		// b1_num (не отображаем)
 		// m_currentData[6]
 
-		// b1_den
+		// b1_den (не отображаем)
 		// m_currentData[7]
 
-		// b2_num
+		// b2_num (не отображаем)
 		// m_currentData[8]
 
-		// b2_den
+		// b2_den (не отображаем)
 		// m_currentData[9]
 
 		// D
@@ -229,16 +277,20 @@ void CObjectsDlg::UpdateDisplayedData()
 		if (m_editD1Val) m_editD1Val->SetWindowText(strValue);
 
 		// d2
-		// m_currentData[14]
+		strValue.Format(_T("%.0f"), m_currentData[14]);
+		if (m_editD2) m_editD2->SetWindowText(strValue);
 
 		// n
-		// m_currentData[15]
+		strValue.Format(_T("%.0f"), m_currentData[15]);
+		if (m_editN) m_editN->SetWindowText(strValue);
 
 		// d4
-		// m_currentData[16]
+		strValue.Format(_T("%.0f"), m_currentData[16]);
+		if (m_editD4) m_editD4->SetWindowText(strValue);
 
 		// n3
-		// m_currentData[17]
+		strValue.Format(_T("%.0f"), m_currentData[17]);
+		if (m_editN3) m_editN3->SetWindowText(strValue);
 
 		// l
 		strValue.Format(_T("%.0f"), m_currentData[18]);

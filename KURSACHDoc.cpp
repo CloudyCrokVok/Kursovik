@@ -160,8 +160,14 @@ std::vector<double> CKURSACHDoc::GetHalfCouplingData(int execution, int variant)
 {
 	std::vector<double> result;
 
-	// Преобразуем execution в double для поиска
+	// ВАЖНОЕ ИСПРАВЛЕНИЕ: преобразуем целое число исполнения в double
+	// Так как в структуре HalfCouplingData поле M имеет тип double
 	double executionD = (double)execution;
+
+	// Для исполнения 31 нужно преобразовать в 31.5
+	if (execution == 31) {
+		executionD = 31.5;
+	}
 
 	// Поиск данных по исполнению и варианту
 	for (int i = 0; i < (int)m_halfCouplingData.size(); i++)
