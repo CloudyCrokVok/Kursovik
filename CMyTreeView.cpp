@@ -9,7 +9,7 @@
 #define new DEBUG_NEW
 #endif
 
-IMPLEMENT_DYNCREATE(CMyTreeView, CTreeView)
+IMPLEMENT_DYNCREATE(CMyTreeView,  CTreeView)
 
 BEGIN_MESSAGE_MAP(CMyTreeView, CTreeView)
 	ON_NOTIFY_REFLECT(TVN_SELCHANGED, &CMyTreeView::OnSelchanged)
