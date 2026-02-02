@@ -11,6 +11,19 @@
 #include "KURSACHDoc.h"
 #include "MainFrm.h"
 
+// --- KOMPAS-3D API5 подключение (вариант A: двойные \\) ---
+#include "C:\\Program Files\\ASCON\\KOMPAS-3D v23 Study\\SDK\\Include\\ksConstants.h"
+#include "C:\\Program Files\\ASCON\\KOMPAS-3D v23 Study\\SDK\\Include\\ksConstants3D.h"
+
+#import "C:\\Program Files\\ASCON\\KOMPAS-3D v23 Study\\SDK\\lib\\kAPI5.tlb" \
+    rename("GetObject", "KompasGetObject") \
+    rename("min",       "KompasMin") \
+    rename("max",       "KompasMax")
+
+#include <comdef.h>
+#include <oleauto.h>
+// -----------------------------------------------------------
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -18,6 +31,77 @@
 // CMainFrame
 
 IMPLEMENT_DYNCREATE(CMainFrame, CFrameWnd)
+
+
+// ---- KOMPAS-3D запуск (без параметров/построения) ----
+static bool SetDispatchBoolProperty(IDispatch* disp, LPCOLESTR name, bool value)
+{
+    if (!disp) return false;
+
+    DISPID dispid;
+    HRESULT hr = disp->GetIDsOfNames(IID_NULL, const_cast<LPOLESTR*>(&name), 1,
+                                    LOCALE_USER_DEFAULT, &dispid);
+    if (FAILED(hr)) return false;
+
+    VARIANTARG var;
+    VariantInit(&var);
+    var.vt = VT_BOOL;
+    var.boolVal = value ? VARIANT_TRUE : VARIANT_FALSE;
+
+    DISPPARAMS params{};
+    params.cArgs = 1;
+    params.rgvarg = &var;
+    params.cNamedArgs = 1;
+    DISPID dispidNamed = DISPID_PROPERTYPUT;
+    params.rgdispidNamedArgs = &dispidNamed;
+
+    hr = disp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT,
+                      DISPATCH_PROPERTYPUT, &params, nullptr, nullptr, nullptr);
+
+    VariantClear(&var);
+    return SUCCEEDED(hr);
+}
+
+static bool StartKompasAPI5()
+{
+    // MFC обычно уже инициализирует OLE через AfxOleInit(), но на всякий случай:
+    HRESULT hrCo = CoInitialize(nullptr);
+
+    CLSID clsid{};
+    HRESULT hr = CLSIDFromProgID(L"KOMPAS.Application.5", &clsid);
+    if (FAILED(hr))
+    {
+        if (SUCCEEDED(hrCo)) CoUninitialize();
+        return false;
+    }
+
+    IUnknown* unk = nullptr;
+    hr = GetActiveObject(clsid, nullptr, &unk);
+
+    IDispatch* disp = nullptr;
+    if (SUCCEEDED(hr) && unk)
+    {
+        unk->QueryInterface(IID_IDispatch, (void**)&disp);
+        unk->Release();
+    }
+    else
+    {
+        hr = CoCreateInstance(clsid, nullptr, CLSCTX_LOCAL_SERVER, IID_IDispatch, (void**)&disp);
+        if (FAILED(hr) || !disp)
+        {
+            if (SUCCEEDED(hrCo)) CoUninitialize();
+            return false;
+        }
+    }
+
+    // делаем видимым
+    SetDispatchBoolProperty(disp, L"Visible", true);
+    disp->Release();
+
+    if (SUCCEEDED(hrCo)) CoUninitialize();
+    return true;
+}
+// ------------------------------------------------------
 
 BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_WM_CREATE()
@@ -169,6 +253,14 @@ void CMainFrame::OnShayba()
 
 void CMainFrame::OnSborka()
 {
+	// Запуск КОМПАС-3D (API5)
+	if (!StartKompasAPI5())
+	{
+		MessageBox(_T("Не удалось запустить/подключиться к КОМПАС-3D (API5)."), _T("Ошибка"), MB_OK | MB_ICONERROR);
+		return;
+	}
+
+
 	// Построение сборки
 	CKURSACHDoc* pDoc = (CKURSACHDoc*)GetActiveDocument();
 	if (pDoc)
