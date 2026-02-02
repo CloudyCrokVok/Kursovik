@@ -1,2 +1,72 @@
-﻿  KURSACHDoc.cpp
+﻿  CMyTreeView.cpp
+C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(50,9): warning C4005: ID_PARAMETRS: изменение макроопределения
+  (компиляция исходного файла "/CMyTreeView.cpp")
+      C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(14,9):
+      см. предыдущее определение "ID_PARAMETRS"
+  
+C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(51,9): warning C4005: ID_SBORKA: изменение макроопределения
+  (компиляция исходного файла "/CMyTreeView.cpp")
+      C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(13,9):
+      см. предыдущее определение "ID_SBORKA"
+  
+  CObjectsDlg.cpp
+C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(50,9): warning C4005: ID_PARAMETRS: изменение макроопределения
+  (компиляция исходного файла "/CObjectsDlg.cpp")
+      C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(14,9):
+      см. предыдущее определение "ID_PARAMETRS"
+  
+C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(51,9): warning C4005: ID_SBORKA: изменение макроопределения
+  (компиляция исходного файла "/CObjectsDlg.cpp")
+      C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(13,9):
+      см. предыдущее определение "ID_SBORKA"
+  
+  KURSACH.cpp
+C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(50,9): warning C4005: ID_PARAMETRS: изменение макроопределения
+  (компиляция исходного файла "/KURSACH.cpp")
+      C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(14,9):
+      см. предыдущее определение "ID_PARAMETRS"
+  
+C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(51,9): warning C4005: ID_SBORKA: изменение макроопределения
+  (компиляция исходного файла "/KURSACH.cpp")
+      C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(13,9):
+      см. предыдущее определение "ID_SBORKA"
+  
+  KURSACHDoc.cpp
+C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(50,9): warning C4005: ID_PARAMETRS: изменение макроопределения
+  (компиляция исходного файла "/KURSACHDoc.cpp")
+      C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(14,9):
+      см. предыдущее определение "ID_PARAMETRS"
+  
+C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(51,9): warning C4005: ID_SBORKA: изменение макроопределения
+  (компиляция исходного файла "/KURSACHDoc.cpp")
+      C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(13,9):
+      см. предыдущее определение "ID_SBORKA"
+  
+  KURSACHView.cpp
+C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(50,9): warning C4005: ID_PARAMETRS: изменение макроопределения
+  (компиляция исходного файла "/KURSACHView.cpp")
+      C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(14,9):
+      см. предыдущее определение "ID_PARAMETRS"
+  
+C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(51,9): warning C4005: ID_SBORKA: изменение макроопределения
+  (компиляция исходного файла "/KURSACHView.cpp")
+      C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(13,9):
+      см. предыдущее определение "ID_SBORKA"
+  
+  MainFrm.cpp
+C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(50,9): warning C4005: ID_PARAMETRS: изменение макроопределения
+  (компиляция исходного файла "/MainFrm.cpp")
+      C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(14,9):
+      см. предыдущее определение "ID_PARAMETRS"
+  
+C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(51,9): warning C4005: ID_SBORKA: изменение макроопределения
+  (компиляция исходного файла "/MainFrm.cpp")
+      C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\resource.h(13,9):
+      см. предыдущее определение "ID_SBORKA"
+  
+  Создание кода...
+resource.h(50): warning RC4005: 'ID_PARAMETRS' : redefinition
+  
+resource.h(51): warning RC4005: 'ID_SBORKA' : redefinition
+  
   KURSACH.vcxproj -> C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\x64\Debug\KURSACH.exe
