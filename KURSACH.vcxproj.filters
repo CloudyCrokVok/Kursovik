@@ -15,6 +15,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CShaybaDlg.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="KURSACH.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
@@ -68,6 +73,9 @@
     <ClCompile Include="CObjectsDlg.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+      <ClInclude Include="CShaybaDlg.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KURSACH.rc">

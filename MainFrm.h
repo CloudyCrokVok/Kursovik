@@ -17,6 +17,7 @@ public:
 public:
 	// Добавляем методы для обработки команд меню
 	void OnParametrs();
+	void OnShayba();
 	void OnSborka();
 
 	// Переопределение

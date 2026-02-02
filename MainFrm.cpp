@@ -7,6 +7,7 @@
 #include "KURSACHView.h"
 #include "CMyTreeView.h"
 #include "CObjectsDlg.h"
+#include "CShaybaDlg.h"
 #include "KURSACHDoc.h"
 #include "MainFrm.h"
 
@@ -23,6 +24,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	// Добавляем обработчики для меню Сборка
 	ON_COMMAND(ID_PARAMETRS, &CMainFrame::OnParametrs)
 	ON_COMMAND(ID_SBORKA, &CMainFrame::OnSborka)
+	ON_COMMAND(ID_SHAYBA, &CMainFrame::OnShayba)
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
@@ -151,6 +153,19 @@ void CMainFrame::OnParametrs()
 	}
 }
 
+
+
+void CMainFrame::OnShayba()
+{
+	// Получаем документ безопасным способом (через активное представление)
+	CKURSACHDoc* pDoc = nullptr;
+	CView* pView = GetActiveView();
+	if (pView)
+		pDoc = (CKURSACHDoc*)pView->GetDocument();
+
+	CShaybaDlg dlg(pDoc, this);
+	dlg.DoModal();
+}
 
 void CMainFrame::OnSborka()
 {
