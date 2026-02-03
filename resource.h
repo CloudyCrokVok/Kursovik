@@ -44,6 +44,27 @@
 #define ID_BOLT_7796                    32782
 #define ID_BOLT_7817                    32783
 
+
+// --- Nut (гайка) params dialog ---
+#define IDD_GAYKA_PARAMS                 313
+#define IDC_EDIT_NUT_D2                  1030
+#define IDC_EDIT_NUT_M                   1031
+#define IDC_EDIT_NUT_B                   1032
+
+// --- Bolt GOST 7796 params dialog ---
+#define IDD_BOLT_7796_PARAMS             314
+#define IDC_EDIT_B7796_D2                1040
+#define IDC_EDIT_B7796_L1                1041
+#define IDC_EDIT_B7796_K                 1042
+#define IDC_EDIT_B7796_S                 1043
+
+// --- Bolt GOST 7817 params dialog ---
+#define IDD_BOLT_7817_PARAMS             315
+#define IDC_EDIT_B7817_D2                1050
+#define IDC_EDIT_B7817_L1                1051
+#define IDC_EDIT_B7817_K                 1052
+#define IDC_EDIT_B7817_S                 1053
+
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED

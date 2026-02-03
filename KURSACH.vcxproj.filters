@@ -18,6 +18,15 @@
     <ClCompile Include="CShaybaDlg.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+      <ClCompile Include="CNutDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+      <ClCompile Include="CBolt7796Dlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+      <ClCompile Include="CBolt7817Dlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="KURSACH.h">
@@ -75,6 +84,15 @@
     </ClCompile>
       <ClInclude Include="CShaybaDlg.h">
       <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+      <ClInclude Include="CNutDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+      <ClInclude Include="CBolt7796Dlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+      <ClInclude Include="CBolt7817Dlg.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

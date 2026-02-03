@@ -186,6 +186,9 @@
     <ClInclude Include="CMyTreeView.h" />
     <ClInclude Include="CObjectsDlg.h" />
     <ClInclude Include="CShaybaDlg.h" />
+    <ClInclude Include="CNutDlg.h" />
+    <ClInclude Include="CBolt7796Dlg.h" />
+    <ClInclude Include="CBolt7817Dlg.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="KURSACH.h" />
     <ClInclude Include="KURSACHDoc.h" />
@@ -199,6 +202,9 @@
     <ClCompile Include="CMyTreeView.cpp" />
     <ClCompile Include="CObjectsDlg.cpp" />
     <ClCompile Include="CShaybaDlg.cpp" />
+    <ClCompile Include="CNutDlg.cpp" />
+    <ClCompile Include="CBolt7796Dlg.cpp" />
+    <ClCompile Include="CBolt7817Dlg.cpp" />
     <ClCompile Include="KURSACH.cpp" />
     <ClCompile Include="KURSACHDoc.cpp" />
     <ClCompile Include="KURSACHView.cpp" />

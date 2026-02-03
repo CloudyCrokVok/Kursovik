@@ -8,6 +8,9 @@
 #include "CMyTreeView.h"
 #include "CObjectsDlg.h"
 #include "CShaybaDlg.h"
+#include "CBolt7817Dlg.h"
+#include "CBolt7796Dlg.h"
+#include "CNutDlg.h"
 #include "KURSACHDoc.h"
 #include "MainFrm.h"
 
@@ -109,6 +112,10 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_COMMAND(ID_PARAMETRS, &CMainFrame::OnParametrs)
 	ON_COMMAND(ID_SBORKA, &CMainFrame::OnSborka)
 	ON_COMMAND(ID_SHAYBA, &CMainFrame::OnShayba)
+
+	ON_COMMAND(ID_GAYKA, &CMainFrame::OnGayka)
+	ON_COMMAND(ID_BOLT_7796, &CMainFrame::OnBolt7796)
+	ON_COMMAND(ID_BOLT_7817, &CMainFrame::OnBolt7817)
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
