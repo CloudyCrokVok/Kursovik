@@ -112,7 +112,6 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_COMMAND(ID_PARAMETRS, &CMainFrame::OnParametrs)
 	ON_COMMAND(ID_SBORKA, &CMainFrame::OnSborka)
 	ON_COMMAND(ID_SHAYBA, &CMainFrame::OnShayba)
-
 	ON_COMMAND(ID_GAYKA, &CMainFrame::OnGayka)
 	ON_COMMAND(ID_BOLT_7796, &CMainFrame::OnBolt7796)
 	ON_COMMAND(ID_BOLT_7817, &CMainFrame::OnBolt7817)
@@ -244,8 +243,6 @@ void CMainFrame::OnParametrs()
 	}
 }
 
-
-
 void CMainFrame::OnShayba()
 {
 	// Получаем документ безопасным способом (через активное представление)
@@ -313,4 +310,40 @@ void CMainFrame::OnSborka()
 	{
 		MessageBox(_T("Документ не найден"), _T("Ошибка"), MB_OK | MB_ICONERROR);
 	}
+}
+
+void CMainFrame::OnGayka()
+{
+	// Получаем документ безопасным способом (через активное представление)
+	CKURSACHDoc* pDoc = nullptr;
+	CView* pView = GetActiveView();
+	if (pView)
+		pDoc = (CKURSACHDoc*)pView->GetDocument();
+
+	CNutDlg dlg(pDoc, this);
+	dlg.DoModal();
+}
+
+void CMainFrame::OnBolt7796()
+{
+	// Получаем документ безопасным способом (через активное представление)
+	CKURSACHDoc* pDoc = nullptr;
+	CView* pView = GetActiveView();
+	if (pView)
+		pDoc = (CKURSACHDoc*)pView->GetDocument();
+
+	CBolt7796Dlg dlg(pDoc, this);
+	dlg.DoModal();
+}
+
+void CMainFrame::OnBolt7817()
+{
+	// Получаем документ безопасным способом (через активное представление)
+	CKURSACHDoc* pDoc = nullptr;
+	CView* pView = GetActiveView();
+	if (pView)
+		pDoc = (CKURSACHDoc*)pView->GetDocument();
+
+	CBolt7817Dlg dlg(pDoc, this);
+	dlg.DoModal();
 }

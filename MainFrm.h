@@ -18,6 +18,15 @@ public:
 	// Добавляем методы для обработки команд меню
 	void OnParametrs();
 	void OnShayba();
+	void OnGayka();
+	void OnBolt7796();
+	void OnBolt7817();
+	void CreatePolumufta();
+	void CreateBoltGOST7796();
+	void CreateBoltGOST7817();
+	void CreateGayka();
+	void CreateShayba();
+	void CreateAssembly();
 	void OnSborka();
 
 	// Переопределение
