@@ -1,0 +1,676 @@
+void CKURSACHRUSALEEV9View::CreatePoluMufta() {
+    pDoc = pKompasApp5->Document3D();
+    pDoc->Create(false, true);
+    pPart = pDoc->GetPart(pTop_Part);
+
+    double length_long = 42.0; // длинная часть
+    double height_short = 40.0; // высокая часть
+    double width_wall = 14; // толщина стенки
+
+    // 1. Эскиз контура "Г"
+    ksEntityPtr pSketch = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchDef = pSketch->GetDefinition();
+    pSketchDef->SetPlane(pPart->GetDefaultEntity(o3d_planeXOZ));
+    pSketch->Create();
+    ksDocument2DPtr p2DDoc = pSketchDef->BeginEdit();
+    p2DDoc->ksLineSeg(0, 0, length_long, 0, 1);
+    p2DDoc->ksLineSeg(length_long, 0, length_long, width_wall, 1);
+    p2DDoc->ksLineSeg(length_long, width_wall, 8, width_wall, 1);
+    p2DDoc->ksLineSeg(8, width_wall, 8, height_short, 1);
+    p2DDoc->ksLineSeg(8, height_short, 0, height_short, 1);
+    p2DDoc->ksLineSeg(0, height_short, 0, 0, 1);
+    pSketchDef->EndEdit();
+
+    // 2. Вращение
+    ksEntityPtr pRotate = pPart->NewEntity(o3d_bossRotated);
+    ksBossRotatedDefinitionPtr pRotDef = pRotate->GetDefinition();
+    pRotDef->SetSketch(pSketch);
+    pRotDef->SetSideParam(TRUE, 360);
+    pRotate->Create();
+
+    // 3. ТОРЦЕВЫЕ ОТВЕРСТИЯ
+    double r_top = 9.0 / 2; // D=9.0мм СВЕРХУ
+    double r_bottom = 8.4 / 2; // D=8.4мм СНИЗУ
+    double distance = 55.0 / 2;
+
+    ksEntityCollectionPtr faces = pPart->EntityCollection(o3d_face);
+    ksEntityPtr endFace = nullptr;
+    for (int i = 0; i < faces->GetCount(); i++) {
+        ksEntityPtr face = faces->GetByIndex(i);
+        ksFaceDefinitionPtr def = face->GetDefinition();
+        if (def->IsPlanar()) {
+            endFace = face;
+            break;
+        }
+    }
+
+    ksEntityPtr pPlane = pPart->NewEntity(o3d_planeOffset);
+    ksPlaneOffsetDefinitionPtr pPlaneDef = pPlane->GetDefinition();
+    pPlaneDef->direction = true;
+    pPlaneDef->offset = 1.0;
+    pPlaneDef->SetPlane(endFace);
+    pPlane->Create();
+
+    // Отверстие 1 D=9мм СВЕРХУ
+    ksEntityPtr pSketchHole1 = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchHoleDef1 = pSketchHole1->GetDefinition();
+    pSketchHoleDef1->SetPlane(pPlane);
+    pSketchHole1->Create();
+    ksDocument2DPtr p2DDocHole1 = pSketchHoleDef1->BeginEdit();
+    p2DDocHole1->ksCircle(0, distance, r_top, 1);
+    p2DDocHole1->ksLineSeg(-10, 0, 10, 0, 3);
+    pSketchHoleDef1->EndEdit();
+    ksEntityPtr pCut1 = pPart->NewEntity(o3d_cutExtrusion);
+    ksCutExtrusionDefinitionPtr pCutDef1 = pCut1->GetDefinition();
+    pCutDef1->directionType = dtNormal;
+    pCutDef1->SetSketch(pSketchHole1);
+    pCutDef1->SetSideParam(true, etThroughAll, 0, 0, false);
+    pCut1->Create();
+
+    // Отверстие 2 D=8.4мм СНИЗУ
+    ksEntityPtr pSketchHole2 = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchHoleDef2 = pSketchHole2->GetDefinition();
+    pSketchHoleDef2->SetPlane(pPlane);
+    pSketchHole2->Create();
+    ksDocument2DPtr p2DDocHole2 = pSketchHoleDef2->BeginEdit();
+    p2DDocHole2->ksCircle(0, -distance, r_bottom, 1);
+    p2DDocHole2->ksLineSeg(-10, 0, 10, 0, 3);
+    pSketchHoleDef2->EndEdit();
+    ksEntityPtr pCut2 = pPart->NewEntity(o3d_cutExtrusion);
+    ksCutExtrusionDefinitionPtr pCutDef2 = pCut2->GetDefinition();
+    pCutDef2->directionType = dtNormal;
+    pCutDef2->SetSketch(pSketchHole2);
+    pCutDef2->SetSideParam(true, etThroughAll, 0, 0, false);
+    pCut2->Create();
+
+    // 4. ВЫРЕЗ СБОКУ D=25мм, глубина=2мм
+    double r_side = 25.0 / 2;
+    double depth_side = 2.0;
+    ksEntityPtr sidePlane = pPart->GetDefaultEntity(o3d_planeYOZ);
+    ksEntityPtr pSketchSide = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchSideDef = pSketchSide->GetDefinition();
+    pSketchSideDef->SetPlane(sidePlane);
+    pSketchSide->Create();
+    ksDocument2DPtr p2DDocSide = pSketchSideDef->BeginEdit();
+    p2DDocSide->ksCircle(0, 0, r_side, 1);
+    p2DDocSide->ksLineSeg(-10, 0, 10, 0, 3);
+    pSketchSideDef->EndEdit();
+    ksEntityPtr pCutSide = pPart->NewEntity(o3d_cutExtrusion);
+    ksCutExtrusionDefinitionPtr pCutSideDef = pCutSide->GetDefinition();
+    pCutSideDef->directionType = dtNormal;
+    pCutSideDef->SetSketch(pSketchSide);
+    pCutSideDef->SetSideParam(true, etBlind, depth_side, 0, false);
+    pCutSide->Create();
+
+    // 5. ВНУТРЕННИЙ СКВОЗНОЙ ВЫРЕЗ D=18мм
+    double r_inner = 18.0 / 2;
+    ksEntityPtr innerPlane = pPart->GetDefaultEntity(o3d_planeYOZ);
+    ksEntityPtr pSketchInner = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchInnerDef = pSketchInner->GetDefinition();
+    pSketchInnerDef->SetPlane(innerPlane);
+    pSketchInner->Create();
+    ksDocument2DPtr p2DDocInner = pSketchInnerDef->BeginEdit();
+    p2DDocInner->ksCircle(0, 0, r_inner, 1);
+    p2DDocInner->ksLineSeg(-10, 0, 10, 0, 3);
+    pSketchInnerDef->EndEdit();
+    ksEntityPtr pCutInner = pPart->NewEntity(o3d_cutExtrusion);
+    ksCutExtrusionDefinitionPtr pCutInnerDef = pCutInner->GetDefinition();
+    pCutInnerDef->directionType = dtNormal;
+    pCutInnerDef->SetSketch(pSketchInner);
+    pCutInnerDef->SetSideParam(true, etThroughAll, 0, 0, false);
+    pCutInner->Create();
+
+    //// 5.5 ПАЗ ПОД ШПОНКУ на плоскости XOY (ДОБАВЛЯЕТСЯ)
+    //double L = 6.0; // Длина паза
+    //double B = 6.0; // Ширина паза
+    //double half_L = L / 2.0; // L/2 = 3мм от центра
+
+    //ksEntityPtr keyPlane = pPart->GetDefaultEntity(o3d_planeXOY);
+    //ksEntityPtr pSketchKey = pPart->NewEntity(o3d_sketch);
+    //ksSketchDefinitionPtr pSketchKeyDef = pSketchKey->GetDefinition();
+    //pSketchKeyDef->SetPlane(keyPlane);
+    //pSketchKey->Create();
+    //ksDocument2DPtr p2DDocKey = pSketchKeyDef->BeginEdit();
+
+    //// Прямоугольник паза: центр на X = L/2 = 3мм, Y=0
+    //double x_center = half_L; // L/2 от начала координат
+    //p2DDocKey->ksLineSeg(x_center - B / 2, -L / 2, x_center + B / 2, -L / 2, 1); // Нижняя
+    //p2DDocKey->ksLineSeg(x_center + B / 2, -L / 2, x_center + B / 2, L / 2, 1); // Правая
+    //p2DDocKey->ksLineSeg(x_center + B / 2, L / 2, x_center - B / 2, L / 2, 1); // Верхняя
+    //p2DDocKey->ksLineSeg(x_center - B / 2, L / 2, x_center - B / 2, -L / 2, 1); // Левая
+    //pSketchKeyDef->EndEdit();
+
+    //// Вырез паза ВВЕРХ на 10.4мм
+    //ksEntityPtr pCutKey = pPart->NewEntity(o3d_cutExtrusion);
+    //ksCutExtrusionDefinitionPtr pCutKeyDef = pCutKey->GetDefinition();
+    //pCutKeyDef->SetSketch(pSketchKey);
+    //pCutKeyDef->directionType = dtNormal;
+    //pCutKeyDef->SetSideParam(true, etBlind, 10.4, 0, false); // ↑10.4мм
+    //pCutKey->Create();
+
+    // 6. НАСТОЯЩАЯ ФАСКА 1×1мм - ВНЕШНИЙ ТОРЕЦ (X≈42)
+    ksEntityPtr pChamfer = pPart->NewEntity(o3d_chamfer);
+    ksChamferDefinitionPtr pChamferDef = pChamfer->GetDefinition();
+    pChamferDef->SetChamferParam(true, 1, 1);
+    ksEntityCollectionPtr fl = pChamferDef->array();
+    fl->Clear();
+
+    // Поиск торцевых ребер (X≈42)
+    ksEntityCollectionPtr edges = pPart->EntityCollection(o3d_edge);
+    for (int i = 0; i < edges->GetCount(); i++) {
+        ksEntityPtr edge = edges->GetByIndex(i);
+        ksEdgeDefinitionPtr def = edge->GetDefinition();
+        ksVertexDefinitionPtr v1 = def->GetVertex(true);
+        if (v1) {
+            double x1, y1, z1;
+            v1->GetPoint(&x1, &y1, &z1);
+            if (fabs(x1 - length_long) < 1.0) {
+                fl->Add(edge);
+            }
+        }
+    }
+    pChamfer->Create();
+
+    // 7. ФАСКА 1×1мм НА ПРЯМОУГОЛЬНИК 40×8 (ТОЛЬКО 2 РЕБРА)
+    ksEntityPtr pChamferRect = pPart->NewEntity(o3d_chamfer);
+    ksChamferDefinitionPtr pChamferRectDef = pChamferRect->GetDefinition();
+    pChamferRectDef->SetChamferParam(true, 1, 1);
+    ksEntityCollectionPtr flRect = pChamferRectDef->array();
+    flRect->Clear();
+    ksEntityCollectionPtr allEdges = pPart->EntityCollection(o3d_edge);
+    for (int i = 0; i < allEdges->GetCount(); i++) {
+        ksEntityPtr edge = allEdges->GetByIndex(i);
+        ksEdgeDefinitionPtr def = edge->GetDefinition();
+        ksVertexDefinitionPtr v1 = def->GetVertex(true);
+        ksVertexDefinitionPtr v2 = def->GetVertex(false);
+        if (v1 && v2) {
+            double x1, y1, z1, x2, y2, z2;
+            v1->GetPoint(&x1, &y1, &z1);
+            v2->GetPoint(&x2, &y2, &z2);
+            double r1 = sqrt(x1 * x1 + z1 * z1);
+            double r2 = sqrt(x2 * x2 + z2 * z2);
+            if (fabs(y1) < 0.5 && fabs(y2) < 0.5 && fabs(r1 - 40.0) < 1.0 && fabs(r2 - 40.0) < 1.0) {
+                flRect->Add(edge); // БЕРЕМ ВСЕ 2 РЕБРА!
+            }
+        }
+    }
+    pChamferRect->Create();
+
+    // 8. ФАСКА НА ТОРЦОВЫЕ ОТВЕРСТИЯ - ПО КРУГАМ
+    ksEntityPtr pChamferHoles = pPart->NewEntity(o3d_chamfer);
+    ksChamferDefinitionPtr pChamferHolesDef = pChamferHoles->GetDefinition();
+    pChamferHolesDef->SetChamferParam(true, 0.5, 0.5);
+    ksEntityCollectionPtr flHoles = pChamferHolesDef->array();
+    flHoles->Clear();
+    for (int i = 0; i < allEdges->GetCount(); i++) {
+        ksEntityPtr edge = allEdges->GetByIndex(i);
+        ksEdgeDefinitionPtr def = edge->GetDefinition();
+        if (def->IsCircle()) {
+            ksVertexDefinitionPtr v1 = def->GetVertex(true);
+            if (v1) {
+                double x1, y1, z1;
+                v1->GetPoint(&x1, &y1, &z1);
+                if (fabs(x1 - length_long) < 2.0 && fabs(fabs(z1) - distance) < 3.0) {
+                    flHoles->Add(edge);
+                }
+            }
+        }
+    }
+    pChamferHoles->Create();
+    pDoc->SaveAs(L"C:\\Temp\\Полумуфта.m3d");
+}
+void CKURSACHRUSALEEV9View::CreateGaykaGOST15521(){
+    // 1. Инициализация документа
+    pDoc = pKompasApp5->Document3D();
+    pDoc->Create(false, true);
+    pPart = pDoc->GetPart(pTop_Part);
+
+    // 2. Параметры гайки М8
+    double S = 13.0; // Размер под ключ для М8
+    double m = 6.8;  // Высота гайки для М8
+    double d = 8.0;  // Номинальный диаметр резьбы
+
+    // 3. Эскиз шестигранника
+    ksEntityPtr pSketch = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchDef = pSketch->GetDefinition();
+    pSketchDef->SetPlane(pPart->GetDefaultEntity(o3d_planeXOZ));
+    pSketch->Create();
+    ksDocument2DPtr p2DDoc = pSketchDef->BeginEdit();
+
+    // 4. Построение шестигранника
+    double R_out = S / sqrt(3.0);
+    double x1 = R_out * cos(PI / 6), y1 = R_out * sin(PI / 6);
+    double x2 = R_out * cos(PI / 2), y2 = R_out * sin(PI / 2);
+    double x3 = R_out * cos(5 * PI / 6), y3 = R_out * sin(5 * PI / 6);
+    double x4 = R_out * cos(7 * PI / 6), y4 = R_out * sin(7 * PI / 6);
+    double x5 = R_out * cos(3 * PI / 2), y5 = R_out * sin(3 * PI / 2);
+    double x6 = R_out * cos(11 * PI / 6), y6 = R_out * sin(11 * PI / 6);
+    p2DDoc->ksLineSeg(x1, y1, x2, y2, 1);
+    p2DDoc->ksLineSeg(x2, y2, x3, y3, 1);
+    p2DDoc->ksLineSeg(x3, y3, x4, y4, 1);
+    p2DDoc->ksLineSeg(x4, y4, x5, y5, 1);
+    p2DDoc->ksLineSeg(x5, y5, x6, y6, 1);
+    p2DDoc->ksLineSeg(x6, y6, x1, y1, 1);
+    pSketchDef->EndEdit();
+
+    // 5. Выдавливание шестигранника ВВЕРХ (нормальное направление)
+    ksEntityPtr pBoss = pPart->NewEntity(o3d_bossExtrusion);
+    ksBossExtrusionDefinitionPtr pBossDef = pBoss->GetDefinition();
+    pBossDef->SetSketch(pSketch);
+    pBossDef->directionType = dtNormal;  // Выдавливание ВВЕРХ
+    pBossDef->SetSideParam(true, etBlind, m, 0, false);
+    pBoss->Create();
+
+    // 6. Фаска на ВЕРХНИЕ ребра шестигранника
+    ksEntityPtr pChamferTop = pPart->NewEntity(o3d_chamfer);
+    ksChamferDefinitionPtr pChamferTopDef = pChamferTop->GetDefinition();
+    double angle_rad = 30.0 * PI / 180.0;
+    double chamfer_depth = 1.2 * tan(angle_rad);
+    pChamferTopDef->SetChamferParam(false, 1.2, chamfer_depth);
+    ksEntityCollectionPtr chamferTopEdges = pChamferTopDef->array();
+    chamferTopEdges->Clear();
+    ksEntityCollectionPtr allEdges = pPart->EntityCollection(o3d_edge);
+    for (int i = 0; i < allEdges->GetCount(); i++) {
+        ksEntityPtr edge = allEdges->GetByIndex(i);
+        ksEdgeDefinitionPtr edgeDef = edge->GetDefinition();
+        if (!edgeDef->IsCircle() && edgeDef->IsStraight()) {
+            if (edgeDef->GetOwnerEntity() == pBoss) {
+                ksVertexDefinitionPtr vertex1 = edgeDef->GetVertex(true);
+                ksVertexDefinitionPtr vertex2 = edgeDef->GetVertex(false);
+                double x1, y1, z1, x2, y2, z2;
+                vertex1->GetPoint(&x1, &y1, &z1);
+                vertex2->GetPoint(&x2, &y2, &z2);
+                double tolerance = 0.01;
+                if ((fabs(y1 - m) < tolerance || fabs(y2 - m) < tolerance) && (fabs(y1 - m) < tolerance && fabs(y2 - m) < tolerance)) {
+                    chamferTopEdges->Add(edge);
+                }
+            }
+        }
+    }
+    pChamferTop->Create();
+
+    // 7. Фаска на НИЖНИЕ ребра шестигранника
+    ksEntityPtr pChamferBottom = pPart->NewEntity(o3d_chamfer);
+    ksChamferDefinitionPtr pChamferBottomDef = pChamferBottom->GetDefinition();
+    pChamferBottomDef->SetChamferParam(false, 1.2, chamfer_depth);
+    ksEntityCollectionPtr chamferBottomEdges = pChamferBottomDef->array();
+    chamferBottomEdges->Clear();
+    for (int i = 0; i < allEdges->GetCount(); i++) {
+        ksEntityPtr edge = allEdges->GetByIndex(i);
+        ksEdgeDefinitionPtr edgeDef = edge->GetDefinition();
+        if (!edgeDef->IsCircle() && edgeDef->IsStraight()){
+            if (edgeDef->GetOwnerEntity() == pBoss) {
+                ksVertexDefinitionPtr vertex1 = edgeDef->GetVertex(true);
+                ksVertexDefinitionPtr vertex2 = edgeDef->GetVertex(false);
+                double x1, y1, z1, x2, y2, z2;
+                vertex1->GetPoint(&x1, &y1, &z1);
+                vertex2->GetPoint(&x2, &y2, &z2);
+                double tolerance = 0.01;
+                if ((fabs(y1 - 0) < tolerance || fabs(y2 - 0) < tolerance) && (fabs(y1 - 0) < tolerance && fabs(y2 - 0) < tolerance)) {
+                    chamferBottomEdges->Add(edge);
+                }
+            }
+        }
+    }
+    pChamferBottom->Create();
+
+    // 8. Эскиз отверстия    
+    ksEntityPtr pSketchHole = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchHoleDef = pSketchHole->GetDefinition();
+    pSketchHoleDef->SetPlane(pPart->GetDefaultEntity(o3d_planeXOZ));
+    pSketchHole->Create();
+    p2DDoc = pSketchHoleDef->BeginEdit();
+    p2DDoc->ksCircle(0, 0, d / 2.0, 1);
+    pSketchHoleDef->EndEdit();
+
+    // 9. Вырезание отверстия ВВЕРХ (противоположно выдавливанию шестигранника)
+    ksEntityPtr pCut = pPart->NewEntity(o3d_cutExtrusion);
+    ksCutExtrusionDefinitionPtr pCutDef = pCut->GetDefinition();
+    pCutDef->directionType = dtReverse;
+    pCutDef->SetSketch(pSketchHole);
+    pCutDef->SetSideParam(true, etBlind, m, 0, false);  // Вырез на всю высоту гайки
+    pCut->Create();
+
+    // 10. Фаска на ребра отверстия (упрощенный поиск)
+    ksEntityPtr pChamferHole = pPart->NewEntity(o3d_chamfer);
+    ksChamferDefinitionPtr pChamferHoleDef = pChamferHole->GetDefinition();
+    pChamferHoleDef->SetChamferParam(true, 1.0, 1.0);
+    ksEntityCollectionPtr chamferHoleEdges = pChamferHoleDef->array();
+    chamferHoleEdges->Clear();
+    ksEntityCollectionPtr allFaces = pPart->EntityCollection(o3d_face);
+    for (int i = 0; i < allFaces->GetCount(); i++) {
+        ksEntityPtr face = allFaces->GetByIndex(i);
+        ksFaceDefinitionPtr faceDef = face->GetDefinition();
+        if (faceDef->IsCylinder()) {
+            double height, radius;
+            faceDef->GetCylinderParam(&height, &radius);
+            if (fabs(radius - 4.0) < 0.1) {
+                ksEdgeCollectionPtr faceEdges = faceDef->EdgeCollection();
+                for (int j = 0; j < faceEdges->GetCount(); j++) {
+                    ksEdgeDefinitionPtr edgeDef = faceEdges->GetByIndex(j);
+                    if (edgeDef->IsCircle()) {
+                        ksEntityPtr edgeEntity = edgeDef->GetEntity();
+                        ksVertexDefinitionPtr vertex1 = edgeDef->GetVertex(true);
+                        ksVertexDefinitionPtr vertex2 = edgeDef->GetVertex(false);
+                        double x1, y1, z1;
+                        vertex1->GetPoint(&x1, &y1, &z1);
+                        if (fabs(y1 - 0) < 0.01 || fabs(y1 - m) < 0.01) {
+                            chamferHoleEdges->Add(edgeEntity);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    pChamferHole->Create();
+
+    // 11. Сохранение
+    pDoc->SaveAs(L"C:\\Temp\\Гайка_ГОСТ15521.m3d");
+}
+void CKURSACHRUSALEEV9View::CreateBoltGOST7817(){
+    // 1. Создаем документ
+    pDoc = pKompasApp5->Document3D();
+    pDoc->Create(false, true);
+    pPart = pDoc->GetPart(pTop_Part);
+
+    // 2. Параметры
+    double S = 12.0;                // Размер под ключ
+    double H_head = 5.0;            // Высота шестигранника
+    double L1 = 24.5;               // Расстояние до отверстия
+    double L2 = 15;                 // Длина первого цилиндра
+    double L = 30;                  // Общая длина
+    double D1 = 9.0;                // Диаметр первого цилиндра
+    double D2 = 8.0;                // Диаметр второго цилиндра
+    double d = 2.0;                 // Диаметр отверстия
+    double r = 0.4;                 // Радиус под головкой
+    double Hl1 = H_head + L1;       // Расстояние до отверстия + Высота шестигранника
+    double Hl2 = H_head + L2;       // Длина первого цилиндра + Высота шестигранника
+    double HL = H_head + L;         // Общая длина + Высота шестигранника
+    
+
+    // 3. Первый эскиз - шестигранник на плоскости ZOX
+    ksEntityPtr pSketch1 = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchDef1 = pSketch1->GetDefinition();
+    pSketchDef1->SetPlane(pPart->GetDefaultEntity(o3d_planeXOZ));  // ZOX
+    pSketch1->Create();
+    ksDocument2DPtr p2DDoc = pSketchDef1->BeginEdit();
+    double R_out = S / sqrt(3.0);
+    double x1 = R_out * cos(PI / 6), y1 = R_out * sin(PI / 6);
+    double x2 = R_out * cos(PI / 2), y2 = R_out * sin(PI / 2);
+    double x3 = R_out * cos(5 * PI / 6), y3 = R_out * sin(5 * PI / 6);
+    double x4 = R_out * cos(7 * PI / 6), y4 = R_out * sin(7 * PI / 6);
+    double x5 = R_out * cos(3 * PI / 2), y5 = R_out * sin(3 * PI / 2);
+    double x6 = R_out * cos(11 * PI / 6), y6 = R_out * sin(11 * PI / 6);
+    p2DDoc->ksLineSeg(x1, y1, x2, y2, 1);
+    p2DDoc->ksLineSeg(x2, y2, x3, y3, 1);
+    p2DDoc->ksLineSeg(x3, y3, x4, y4, 1);
+    p2DDoc->ksLineSeg(x4, y4, x5, y5, 1);
+    p2DDoc->ksLineSeg(x5, y5, x6, y6, 1);
+    p2DDoc->ksLineSeg(x6, y6, x1, y1, 1);
+    pSketchDef1->EndEdit();
+
+    // 4. Выдавливание шестигранника
+    ksEntityPtr pExtrude1 = pPart->NewEntity(o3d_bossExtrusion);
+    ksBossExtrusionDefinitionPtr pExtrudeDef1 = pExtrude1->GetDefinition();
+    pExtrudeDef1->SetSketch(pSketch1);
+    pExtrudeDef1->directionType = dtNormal;
+    pExtrudeDef1->SetSideParam(true, etBlind, H_head, 0, false);
+    pExtrude1->Create();
+
+    // 5. Второй эскиз - круг 9 мм на плоскости ZOX
+    ksEntityPtr pSketch2 = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchDef2 = pSketch2->GetDefinition();
+    pSketchDef2->SetPlane(pPart->GetDefaultEntity(o3d_planeXOZ));
+    pSketch2->Create();
+    p2DDoc = pSketchDef2->BeginEdit();
+    p2DDoc->ksCircle(0, 0, D1 / 2.0, 1);
+    pSketchDef2->EndEdit();
+
+    // 6. Выдавливание первого цилиндра 
+    ksEntityPtr pExtrude2 = pPart->NewEntity(o3d_bossExtrusion);
+    ksBossExtrusionDefinitionPtr pExtrudeDef2 = pExtrude2->GetDefinition();
+    pExtrudeDef2->SetSketch(pSketch2);
+    pExtrudeDef2->directionType = dtNormal;
+    pExtrudeDef2->SetSideParam(true, etBlind, Hl2, 0, false);
+    pExtrude2->Create();
+
+    // 7. Третий эскиз - круг 8 мм на плоскости ZOX
+    ksEntityPtr pSketch3 = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchDef3 = pSketch3->GetDefinition();
+    pSketchDef3->SetPlane(pPart->GetDefaultEntity(o3d_planeXOZ));
+    pSketch3->Create();
+    p2DDoc = pSketchDef3->BeginEdit();
+    p2DDoc->ksCircle(0, 0, D2 / 2.0, 1);
+    pSketchDef3->EndEdit();
+
+    // 8. Выдавливание второго цилиндра
+    ksEntityPtr pExtrude3 = pPart->NewEntity(o3d_bossExtrusion);
+    ksBossExtrusionDefinitionPtr pExtrudeDef3 = pExtrude3->GetDefinition();
+    pExtrudeDef3->SetSketch(pSketch3);
+    pExtrudeDef3->directionType = dtNormal;
+    pExtrudeDef3->SetSideParam(true, etBlind, HL, 0, false);
+    pExtrude3->Create();
+
+    // 9. Создание отверстия на втором цилиндре
+    ksEntityPtr pSketch4 = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchDef4 = pSketch4->GetDefinition();
+    pSketchDef4->SetPlane(pPart->GetDefaultEntity(o3d_planeXOY));
+    pSketch4->Create();
+    p2DDoc = pSketchDef4->BeginEdit();
+    p2DDoc->ksCircle(0, Hl1, d / 2.0, 1);
+    pSketchDef4->EndEdit();
+
+    // 10. Вырез симметрично
+    ksEntityPtr pCut = pPart->NewEntity(o3d_cutExtrusion);
+    ksCutExtrusionDefinitionPtr pCutDef = pCut->GetDefinition();
+    pCutDef->directionType = dtMiddlePlane;
+    pCutDef->SetSketch(pSketch4);
+    pCutDef->SetSideParam(true, etBlind, D2, 0, false);
+    pCut->Create();
+
+    // 11. Создание скруглений
+    ksEntityPtr pFillet = pPart->NewEntity(o3d_fillet);
+    ksFilletDefinitionPtr pFilletDef = pFillet->GetDefinition();
+    pFilletDef->radius = r;
+    ksEntityCollectionPtr fl = pFilletDef->array();
+    fl->Clear();
+    fl->Add(pSketch2);
+    pFillet->Create();
+
+    // 12. Создаем фаску
+
+
+    // 12. Сохранение
+    pDoc->SaveAs(L"C:\\Temp\\Болт_ГОСТ7817.m3d");
+}
+void CKURSACHRUSALEEV9View::CreateBoltGOST7796() {
+    // 1. Создаем документ
+    pDoc = pKompasApp5->Document3D();
+    pDoc->Create(false, true);
+    pPart = pDoc->GetPart(pTop_Part);
+
+    // 2. Параметры
+    double S = 12.0;                    // Размер под ключ
+    double k = 4.85;                    // Высота головки
+    double Dw = 10.5;                   // Диаметр подголовки
+    double hw = 0.15;                   // Высота подголовки
+    double khw = k + hw;                // Высота головки + Высота подголовки
+    double d = 8;                       // Диаметр болта
+    double l = 16;                      // Длина болта
+    double khwl = khw + l;              // Высота головки + Высота подголовки + Длина болта
+
+    // 3. Первый эскиз - шестигранник на плоскости ZOX
+    ksEntityPtr pSketch1 = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchDef1 = pSketch1->GetDefinition();
+    pSketchDef1->SetPlane(pPart->GetDefaultEntity(o3d_planeXOZ));  // ZOX
+    pSketch1->Create();
+    ksDocument2DPtr p2DDoc = pSketchDef1->BeginEdit();
+    double R_out = S / sqrt(3.0);
+    double x1 = R_out * cos(PI / 6), y1 = R_out * sin(PI / 6);
+    double x2 = R_out * cos(PI / 2), y2 = R_out * sin(PI / 2);
+    double x3 = R_out * cos(5 * PI / 6), y3 = R_out * sin(5 * PI / 6);
+    double x4 = R_out * cos(7 * PI / 6), y4 = R_out * sin(7 * PI / 6);
+    double x5 = R_out * cos(3 * PI / 2), y5 = R_out * sin(3 * PI / 2);
+    double x6 = R_out * cos(11 * PI / 6), y6 = R_out * sin(11 * PI / 6);
+    p2DDoc->ksLineSeg(x1, y1, x2, y2, 1);
+    p2DDoc->ksLineSeg(x2, y2, x3, y3, 1);
+    p2DDoc->ksLineSeg(x3, y3, x4, y4, 1);
+    p2DDoc->ksLineSeg(x4, y4, x5, y5, 1);
+    p2DDoc->ksLineSeg(x5, y5, x6, y6, 1);
+    p2DDoc->ksLineSeg(x6, y6, x1, y1, 1);
+    pSketchDef1->EndEdit();
+
+    // 4. Выдавливание шестигранника
+    ksEntityPtr pExtrude1 = pPart->NewEntity(o3d_bossExtrusion);
+    ksBossExtrusionDefinitionPtr pExtrudeDef1 = pExtrude1->GetDefinition();
+    pExtrudeDef1->SetSketch(pSketch1);
+    pExtrudeDef1->directionType = dtNormal;
+    pExtrudeDef1->SetSideParam(true, etBlind, k, 0, false);
+    pExtrude1->Create();
+
+    // 5. Созданиние подголовки
+    ksEntityPtr pSketch2 = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchDef2 = pSketch2->GetDefinition();
+    pSketchDef2->SetPlane(pPart->GetDefaultEntity(o3d_planeXOZ));
+    pSketch2->Create();
+    p2DDoc = pSketchDef2->BeginEdit();
+    p2DDoc->ksCircle(0, 0, Dw / 2.0, 1);
+    pSketchDef2->EndEdit();
+
+    // 6. Выдавливание подголовки
+    ksEntityPtr pExtrude2 = pPart->NewEntity(o3d_bossExtrusion);
+    ksBossExtrusionDefinitionPtr pExtrudeDef2 = pExtrude2->GetDefinition();
+    pExtrudeDef2->SetSketch(pSketch2);
+    pExtrudeDef2->directionType = dtNormal;
+    pExtrudeDef2->SetSideParam(true, etBlind, khw, 0, false);
+    pExtrude2->Create();
+
+    // 7. Созданиние болта
+    ksEntityPtr pSketch3 = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchDef3 = pSketch3->GetDefinition();
+    pSketchDef3->SetPlane(pPart->GetDefaultEntity(o3d_planeXOZ));
+    pSketch3->Create();
+    p2DDoc = pSketchDef3->BeginEdit();
+    p2DDoc->ksCircle(0, 0, d / 2.0, 1);
+    pSketchDef3->EndEdit();
+
+    // 8. Выдавливание болта
+    ksEntityPtr pExtrude3 = pPart->NewEntity(o3d_bossExtrusion);
+    ksBossExtrusionDefinitionPtr pExtrudeDef3 = pExtrude3->GetDefinition();
+    pExtrudeDef3->SetSketch(pSketch3);
+    pExtrudeDef3->directionType = dtNormal;
+    pExtrudeDef3->SetSideParam(true, etBlind, khwl, 0, false);
+    pExtrude3->Create();
+
+    // 9. Создание фасок
+
+    // Сохраняем
+    pDoc->SaveAs(L"C:\\Temp\\Болт_ГОСТ7796.m3d");
+}
+void CKURSACHRUSALEEV9View::CreateShaybaGOST6402() {
+    // 1. Создаем документ
+    pDoc = pKompasApp5->Document3D();
+    pDoc->Create(false, true);
+    pPart = pDoc->GetPart(pTop_Part);
+
+    // 2. Параметры
+    double d = 8;                       // Диаметр отверстия (ПАРАМЕТР)
+    double s = 1.6;                     // Толщина
+    double b = 2;                       // Ширина кольца
+    double db = d + b;                  // Наружный диаметр
+    double rect_width = d/4;            // Ширина прямоугольника
+    double rect_height = d/2;           // Высота прямоугольника
+    double rect_center_y = d / 2;
+
+    // 3. Внешнее кольцо
+    ksEntityPtr pSketch1 = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchDef1 = pSketch1->GetDefinition();
+    pSketchDef1->SetPlane(pPart->GetDefaultEntity(o3d_planeXOZ));
+    pSketch1->Create();
+    ksDocument2DPtr p2DDoc1 = pSketchDef1->BeginEdit();
+    p2DDoc1->ksCircle(0, 0, db / 2.0, 1);
+    pSketchDef1->EndEdit();
+
+    // 4. Круговое отверстие
+    ksEntityPtr pSketch2 = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchDef2 = pSketch2->GetDefinition();
+    pSketchDef2->SetPlane(pPart->GetDefaultEntity(o3d_planeXOZ));
+    pSketch2->Create();
+    ksDocument2DPtr p2DDoc2 = pSketchDef2->BeginEdit();
+    p2DDoc2->ksCircle(0, 0, d / 2.0, 1);
+    pSketchDef2->EndEdit();
+
+    // 5. ПРЯМОУГОЛЬНИК: центр зависит от d
+    ksEntityPtr pSketch3 = pPart->NewEntity(o3d_sketch);
+    ksSketchDefinitionPtr pSketchDef3 = pSketch3->GetDefinition();
+    pSketchDef3->SetPlane(pPart->GetDefaultEntity(o3d_planeXOZ));
+    pSketch3->Create();
+    ksDocument2DPtr p2DDoc3 = pSketchDef3->BeginEdit();
+
+    // ПАРАМЕТРИЧЕСКИЕ координаты: центр = (0, d/4)
+    double y_bottom = rect_center_y - rect_height / 2;  // Нижняя линия
+    double y_top = rect_center_y + rect_height / 2;      // Верхняя линия
+
+    p2DDoc3->ksLineSeg(-rect_width / 2, y_bottom, rect_width / 2, y_bottom, 1);
+    p2DDoc3->ksLineSeg(rect_width / 2, y_bottom, rect_width / 2, y_top, 1);
+    p2DDoc3->ksLineSeg(rect_width / 2, y_top, -rect_width / 2, y_top, 1);
+    p2DDoc3->ksLineSeg(-rect_width / 2, y_top, -rect_width / 2, y_bottom, 1);
+
+    pSketchDef3->EndEdit();
+
+    // 6-8. Выдавливания
+    ksEntityPtr pExtrude1 = pPart->NewEntity(o3d_bossExtrusion);
+    ksBossExtrusionDefinitionPtr pExtrudeDef1 = pExtrude1->GetDefinition();
+    pExtrudeDef1->SetSketch(pSketch1);
+    pExtrudeDef1->directionType = dtNormal;
+    pExtrudeDef1->SetSideParam(true, etBlind, s, 0, false);
+    pExtrude1->Create();
+
+    ksEntityPtr pExtrude2 = pPart->NewEntity(o3d_cutExtrusion);
+    ksCutExtrusionDefinitionPtr pExtrudeDef2 = pExtrude2->GetDefinition();
+    pExtrudeDef2->SetSketch(pSketch2);
+    pExtrudeDef2->directionType = dtReverse;
+    pExtrudeDef2->SetSideParam(true, etBlind, s, 0, false);
+    pExtrude2->Create();
+
+    ksEntityPtr pExtrude3 = pPart->NewEntity(o3d_cutExtrusion);
+    ksCutExtrusionDefinitionPtr pExtrudeDef3 = pExtrude3->GetDefinition();
+    pExtrudeDef3->SetSketch(pSketch3);
+    pExtrudeDef3->directionType = dtReverse;
+    pExtrudeDef3->SetSideParam(true, etBlind, s, 0, false);
+    pExtrude3->Create();
+
+    // Сохраняем
+    pDoc->SaveAs(L"C:\\Temp\\Шайба_ГОСТ6402.m3d");
+}
+
+void CKURSACHRUSALEEV9View::CreateSborka() {
+    // 1. Создаем сборку
+    pDoc = pKompasApp5->Document3D();
+    pDoc->Create(false, false);  // false, false = сборка
+    pPart = pDoc->GetPart(pTop_Part);
+
+    // 2. Добавляем 8 деталей 
+    pDoc->SetPartFromFile(L"C:\\Temp\\Полумуфта.m3d", pPart, true);      // 0 - Полумуфта 1
+    pDoc->SetPartFromFile(L"C:\\Temp\\Полумуфта.m3d", pPart, true);      // 1 - Полумуфта 2  
+    pDoc->SetPartFromFile(L"C:\\Temp\\Болт_ГОСТ7817.m3d", pPart, true);  // 2 - Болт 1 (ГОСТ 7817)
+    pDoc->SetPartFromFile(L"C:\\Temp\\Болт_ГОСТ7796.m3d", pPart, true);  // 3 - Болт 2 (ГОСТ 7796)
+    pDoc->SetPartFromFile(L"C:\\Temp\\Гайка_ГОСТ15521.m3d", pPart, true); // 4 - Гайка 1
+    pDoc->SetPartFromFile(L"C:\\Temp\\Гайка_ГОСТ15521.m3d", pPart, true); // 5 - Гайка 2  
+    pDoc->SetPartFromFile(L"C:\\Temp\\Шайба_ГОСТ6402.m3d", pPart, true); // 6 - Шайба 1
+    pDoc->SetPartFromFile(L"C:\\Temp\\Шайба_ГОСТ6402.m3d", pPart, true); // 7 - Шайба 2
+
+    // 3. Получаем ссылки на детали для позиционирования
+    ksPartPtr pPolumufta1 = pDoc->GetPart(0);
+    ksPartPtr pPolumufta2 = pDoc->GetPart(1);
+    ksPartPtr pBolt1 = pDoc->GetPart(2);  // ГОСТ 7817
+    ksPartPtr pBolt2 = pDoc->GetPart(3);  // ГОСТ 7796
+    ksPartPtr pGajka1 = pDoc->GetPart(4);
+    ksPartPtr pGajka2 = pDoc->GetPart(5);
+    ksPartPtr pShayba1 = pDoc->GetPart(6);
+    ksPartPtr pShayba2 = pDoc->GetPart(7);
+
+    // 4. Обновление и сохранение сборки
+    pPart->Update();
+    pDoc->SaveAs(L"C:\\Temp\\Сборка_Полумуфты.m3d");
+}
