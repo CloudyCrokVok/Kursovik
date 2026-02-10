@@ -49,7 +49,7 @@
 #define IDD_GAYKA_PARAMS                 313
 #define IDC_EDIT_NUT_D2                  1030
 #define IDC_EDIT_NUT_M                   1031
-#define IDC_EDIT_NUT_B                   1032
+#define IDC_EDIT_NUT_S                   1032
 
 // --- Bolt GOST 7796 params dialog ---
 #define IDD_BOLT_7796_PARAMS             314

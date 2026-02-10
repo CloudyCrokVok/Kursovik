@@ -4,6 +4,7 @@
 #include "CObjectsDlg.h"
 #include "afxdialogex.h"
 #include "KURSACHDoc.h"  // Добавляем include для документа
+#include <cmath>
 
 // CObjectsDlg dialog
 IMPLEMENT_DYNAMIC(CObjectsDlg, CDialogEx)
@@ -218,6 +219,21 @@ void CObjectsDlg::UpdateDataFromDocument()
 
 void CObjectsDlg::UpdateDisplayedData()
 {
+	auto FormatSmart = [](double v, int maxDecimals = 1) -> CString {
+		// Показываем целые без десятичных, иначе с maxDecimals знаками.
+		CString s;
+		double iv = floor(v + 0.5);
+		if (fabs(v - iv) < 1e-6)
+		{
+			s.Format(_T("%.0f"), iv);
+			return s;
+		}
+		CString fmt;
+		fmt.Format(_T("%%.%df"), maxDecimals);
+		s.Format(fmt, v);
+		return s;
+	};
+
 	if (m_currentData.size() >= 23)  // У нас 23 параметра
 	{
 		CString strValue;
@@ -227,7 +243,7 @@ void CObjectsDlg::UpdateDisplayedData()
 		if (m_editM) m_editM->SetWindowText(strValue);
 
 		// d (диаметр)
-		strValue.Format(_T("%.0f"), m_currentData[1]);
+		strValue = FormatSmart(m_currentData[1], 1);
 		if (m_editD) m_editD->SetWindowText(strValue);
 
 		// exec (исполнение)
@@ -277,7 +293,7 @@ void CObjectsDlg::UpdateDisplayedData()
 		if (m_editD1Val) m_editD1Val->SetWindowText(strValue);
 
 		// d2
-		strValue.Format(_T("%.0f"), m_currentData[14]);
+		strValue = FormatSmart(m_currentData[14], 1);
 		if (m_editD2) m_editD2->SetWindowText(strValue);
 
 		// n
@@ -285,7 +301,7 @@ void CObjectsDlg::UpdateDisplayedData()
 		if (m_editN) m_editN->SetWindowText(strValue);
 
 		// d4
-		strValue.Format(_T("%.0f"), m_currentData[16]);
+		strValue = FormatSmart(m_currentData[16], 1);
 		if (m_editD4) m_editD4->SetWindowText(strValue);
 
 		// n3

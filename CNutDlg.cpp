@@ -4,6 +4,8 @@
 #include "CNutDlg.h"
 #include "KURSACHDoc.h"
 
+#include <cmath>
+
 IMPLEMENT_DYNAMIC(CNutDlg, CDialogEx)
 
 BEGIN_MESSAGE_MAP(CNutDlg, CDialogEx)
@@ -47,9 +49,58 @@ BOOL CNutDlg::OnInitDialog()
         return (idx < data.size()) ? data[idx] : 0.0;
     };
 
-    { CString __v; __v.Format(L"%.2f", get(1)); SetRO(this, IDC_EDIT_NUT_D2, __v); }
-    { CString __v; __v.Format(L"%.2f", get(4)); SetRO(this, IDC_EDIT_NUT_M, __v); }
-    { CString __v; __v.Format(L"%.2f", get(3)); SetRO(this, IDC_EDIT_NUT_B, __v); }
+    // Для гайки (ГОСТ 15522) по заданию используем:
+    //  - d2: 9 или 11 (соответствует болту ГОСТ 7796)
+    //  - m: 4/5/6 (высота гайки)
+        const double hole_d2 = get(14);
+    auto GetNominalThreadD = [](double d2)->int {
+        if (d2 <= 9.0) return 8;
+        if (d2 <= 11.5) return 10;
+        if (d2 <= 14.0) return 12;
+        return (int)floor(d2 + 0.5);
+    };
+    const int d_nom = GetNominalThreadD(hole_d2);
 
-    return TRUE;
+    // По фото4: высота гайки m: 4/5/6
+    auto GetM = [](int d)->double {
+        switch (d)
+        {
+        case 8:  return 4.0;
+        case 10: return 5.0;
+        case 12: return 6.0;
+        default: return 0.0;
+        }
+    };
+
+    // По фото4: размер под ключ S: 12/14/17
+    auto GetS = [](int d)->int {
+        switch (d)
+        {
+        case 8:  return 12;
+        case 10: return 14;
+        case 12: return 17;
+        default: return 0;
+        }
+    };
+
+    // d2 для гайки (под болт 7796): 9 или 11 (а НЕ 8.4/10.5)
+    auto GetNutD2 = [](int d_nom)->int {
+        switch (d_nom)
+        {
+        case 8:  return 9;
+        case 10: return 11;
+        case 12: return 13;
+        default: return d_nom;
+        }
+    };
+
+    // d2 (для гайки показываем 9/11 по ГОСТ 7796)
+    { CString __v; __v.Format(L"%d", GetNutD2(d_nom)); SetRO(this, IDC_EDIT_NUT_D2, __v); }
+
+    // m — высота гайки (4/5/6)
+    { CString __v; __v.Format(L"%.1f", GetM(d_nom)); SetRO(this, IDC_EDIT_NUT_M, __v); }
+        // S — размер под ключ (12/14/17)
+    { CString __v; __v.Format(L"%d", GetS(d_nom)); SetRO(this, IDC_EDIT_NUT_S, __v); }
+
+return TRUE;
 }

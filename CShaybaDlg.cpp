@@ -4,6 +4,7 @@
 #include "KURSACHDoc.h"
 #include "resource.h"
 #include "CShaybaDlg.h"
+#include <cmath>
 
 IMPLEMENT_DYNAMIC(CShaybaDlg, CDialogEx)
 
@@ -51,9 +52,9 @@ BOOL CShaybaDlg::OnInitDialog()
 		}
 	}
 
-	m_d2.Format(L"%.0f", d2);
+	m_d2.Format((fabs(d2 - floor(d2 + 0.5)) < 1e-6) ? L"%.0f" : L"%.1f", d2);
 	m_n.Format(L"%d", n);
-	m_d4.Format(L"%.0f", d4);
+	m_d4.Format((fabs(d4 - floor(d4 + 0.5)) < 1e-6) ? L"%.0f" : L"%.1f", d4);
 
 	SetDlgItemText(IDC_EDIT_SH_D2, m_d2);
 	SetDlgItemText(IDC_EDIT_SH_N, m_n);

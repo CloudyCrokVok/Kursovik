@@ -1,2 +1,12 @@
-﻿  MainFrm.cpp
+﻿  CBolt7796Dlg.cpp
+  CBolt7817Dlg.cpp
+  CMyTreeView.cpp
+  CNutDlg.cpp
+  CObjectsDlg.cpp
+  CShaybaDlg.cpp
+  KURSACH.cpp
+  KURSACHDoc.cpp
+  KURSACHView.cpp
+  MainFrm.cpp
+  Создание кода...
   KURSACH.vcxproj -> C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\x64\Debug\KURSACH.exe
