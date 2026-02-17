@@ -75,6 +75,8 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     const double d3 = GetD(dh, 14, 8.4);
     const double d4 = GetD(dh, 16, 9.0);
     const double D1 = GetD(dh, 11, 55.0);
+    double M = GetD(dh, 0, 16.0);
+    const double R = GetD(dh, 21, 0.2);
 
     // Эскиз №1 полумуфты 
     ksEntityPtr pSketch = m_part->NewEntity(o3d_sketch);
@@ -133,6 +135,92 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pCutDef1->SetSideParam(true, etThroughAll, 0, 0, false);
     pCut1->Create();
 
+    // *** ФАСКА НА ТОРЦЕ X≈l (42мм) - 1×1мм ***
+    m_part->Update(); // Обновляем для поиска ребер
+    ksEntityPtr pChamfer = m_part->NewEntity(o3d_chamfer);
+    ksChamferDefinitionPtr pChamferDef = pChamfer->GetDefinition();
+    pChamferDef->SetChamferParam(true, 1, 1); // 1мм × 1мм
+    ksEntityCollectionPtr fl = pChamferDef->array();
+    fl->Clear();
+
+    // Поиск торцевых ребер (X≈l)
+    ksEntityCollectionPtr edges = m_part->EntityCollection(o3d_edge);
+    for (int i = 0; i < edges->GetCount(); i++)
+    {
+        ksEntityPtr edge = edges->GetByIndex(i);
+        ksEdgeDefinitionPtr def = edge->GetDefinition();
+        ksVertexDefinitionPtr v1 = def->GetVertex(true);
+        if (v1)
+        {
+            double x1, y1, z1;
+            v1->GetPoint(&x1, &y1, &z1);
+            if (fabs(x1 - l) < 1.0) // Торцевые ребра на X≈42
+            {
+                fl->Add(edge);
+            }
+        }
+    }
+    pChamfer->Create();
+
+    // *** ФАСКА НА ВЕРХНИЕ РЕБРА ДИСКА (наружный диаметр D) ***
+    ksEntityPtr pChamferOuter = m_part->NewEntity(o3d_chamfer);
+    ksChamferDefinitionPtr pChamferOuterDef = pChamferOuter->GetDefinition();
+    pChamferOuterDef->SetChamferParam(true, 1, 1);
+    ksEntityCollectionPtr flOuter = pChamferOuterDef->array();
+    flOuter->Clear();
+    double outerR = D / 2.0;
+    for (int i = 0; i < edges->GetCount(); i++)
+    {
+        ksEntityPtr edge = edges->GetByIndex(i);
+        ksEdgeDefinitionPtr def = edge->GetDefinition();
+        if (!def) continue;
+        ksVertexDefinitionPtr v1 = def->GetVertex(true);
+        if (!v1) continue;
+
+        double x1, y1, z1;
+        v1->GetPoint(&x1, &y1, &z1);
+        double rad = sqrt(y1 * y1 + z1 * z1);
+
+        // ребро на торце X=0 или X=l1 и радиус ≈ внешнему
+        if ((fabs(x1) < 1.0 || fabs(x1 - l1) < 1.0) && fabs(rad - outerR) < 1.0)
+        {
+            flOuter->Add(edge);
+        }
+    }
+    pChamferOuter->Create();
+
+    ksEntityPtr pFillet2 = m_part->NewEntity(o3d_fillet);
+    ksFilletDefinitionPtr pFilletDef2 = pFillet2->GetDefinition();
+    pFilletDef2->radius = R;
+    ksEntityCollectionPtr fl2 = pFilletDef2->array();
+    fl2->Clear();
+    double outerRadius = D / 2.0;
+    for (int i = 0; i < edges->GetCount(); i++)
+    {
+        ksEntityPtr edge = edges->GetByIndex(i);
+        ksEdgeDefinitionPtr def = edge->GetDefinition();
+        if (!def) continue;
+
+        // Берём первую вершину ребра (можно также вторую)
+        ksVertexDefinitionPtr v1 = def->GetVertex(true);
+        if (!v1) continue;
+
+        double x1, y1, z1;
+        v1->GetPoint(&x1, &y1, &z1);
+
+        // Проверяем, что ребро находится на нужном торце (x ≈ l1)
+        if (fabs(x1 - l1) < 2.0)
+        {
+            double radius = sqrt(y1 * y1 + z1 * z1);
+            // Если радиус меньше наружного, добавляем ребро (это внутренние рёбра)
+            if (radius < outerRadius - 1.0)  // допуск 1 мм
+            {
+                fl2->Add(edge);
+            }
+        }
+    }
+    pFillet2->Create();
+
     // Эскиз для отверстия для болтов
 
     // Для болта 7817 №3
@@ -168,8 +256,6 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pCutDef3->SetSketch(pSketchHole3);
     pCutDef3->SetSideParam(true, etThroughAll, 0, 0, false);
     pCut3->Create();
-
-
 
     m_doc->SaveAs(L"C:\\Temp\\Полумуфта.m3d");
 }
