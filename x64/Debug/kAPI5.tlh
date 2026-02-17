@@ -1,6 +1,6 @@
-﻿// Created by Microsoft (R) C/C++ Compiler Version 14.44.35217.0 (2f02b8f1).
+﻿// Created by Microsoft (R) C/C++ Compiler Version 14.44.35217.0 (43e404ac).
 //
-// C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\x64\Debug\kAPI5.tlh
+// C:\Users\Данила\Desktop\KURSACH\KURSACH\KURSACH\x64\Debug\kAPI5.tlh
 //
 // C++ source equivalent of Win32 type library C:\\Program Files\\ASCON\\KOMPAS-3D v23 Study\\SDK\\lib\\kAPI5.tlb
 // compiler-generated file - DO NOT EDIT!
@@ -15447,7 +15447,7 @@ ksSaveToPreviusParam : IDispatch
 // Function implementation mapping
 //
 
-#pragma start_map_region("C:\Users\Данила\Desktop\ДЗ\Прога\Kursach\KURSACH\KURSACH\x64\Debug\kAPI5.tli")
+#pragma start_map_region("C:\Users\Данила\Desktop\KURSACH\KURSACH\KURSACH\x64\Debug\kAPI5.tli")
 __declspec(implementation_key(1)) IDispatchPtr KompasObject::Document3D ( );
 __declspec(implementation_key(2)) IDispatchPtr KompasObject::ActiveDocument3D ( );
 __declspec(implementation_key(3)) IDispatchPtr KompasObject::Document2D ( );

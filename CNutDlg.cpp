@@ -102,5 +102,14 @@ BOOL CNutDlg::OnInitDialog()
         // S — размер под ключ (12/14/17)
     { CString __v; __v.Format(L"%d", GetS(d_nom)); SetRO(this, IDC_EDIT_NUT_S, __v); }
 
-return TRUE;
+    // Сохраняем параметры гайки, показанные в editbox-ах, в документ
+    {
+        CKURSACHDoc::NutUIParams p;
+        p.nominal = d_nom;
+        p.m = GetM(d_nom);
+        p.S = GetS(d_nom);
+        m_pDoc->SetNut15521Params(p);
+    }
+
+    return TRUE;
 }

@@ -13,6 +13,7 @@
 #include "CNutDlg.h"
 #include "KURSACHDoc.h"
 #include "MainFrm.h"
+#include "KompasBuilder.h"
 
 // --- KOMPAS-3D API5 подключение (вариант A: двойные \\) ---
 #include "C:\\Program Files\\ASCON\\KOMPAS-3D v23 Study\\SDK\\Include\\ksConstants.h"
@@ -105,6 +106,57 @@ static bool StartKompasAPI5()
     return true;
 }
 // ------------------------------------------------------
+
+static Kompas6API5::KompasObjectPtr GetKompasApp5()
+{
+    HRESULT hrCo = CoInitialize(nullptr);
+
+    CLSID clsid{};
+    HRESULT hr = CLSIDFromProgID(L"KOMPAS.Application.5", &clsid);
+    if (FAILED(hr))
+    {
+        if (SUCCEEDED(hrCo)) CoUninitialize();
+        return nullptr;
+    }
+
+    IUnknown* unk = nullptr;
+    hr = GetActiveObject(clsid, nullptr, &unk);
+
+    IDispatch* disp = nullptr;
+    if (SUCCEEDED(hr) && unk)
+    {
+        unk->QueryInterface(IID_IDispatch, (void**)&disp);
+        unk->Release();
+    }
+    else
+    {
+        hr = CoCreateInstance(clsid, nullptr, CLSCTX_LOCAL_SERVER, IID_IDispatch, (void**)&disp);
+        if (FAILED(hr) || !disp)
+        {
+            if (SUCCEEDED(hrCo)) CoUninitialize();
+            return nullptr;
+        }
+    }
+
+    Kompas6API5::KompasObjectPtr app;
+    try
+    {
+        app = disp;
+    }
+    catch (...)
+    {
+        if (disp) disp->Release();
+        if (SUCCEEDED(hrCo)) CoUninitialize();
+        return nullptr;
+    }
+
+    // делаем видимым
+    SetDispatchBoolProperty(disp, L"Visible", true);
+    disp->Release();
+
+    if (SUCCEEDED(hrCo)) CoUninitialize();
+    return app;
+}
 
 BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
 	ON_WM_CREATE()
@@ -278,27 +330,32 @@ void CMainFrame::OnSborka()
 
 		if (!halfCouplingData.empty())
 		{
-			// Формируем сообщение с параметрами
+			Kompas6API5::KompasObjectPtr app = GetKompasApp5();
+			if (!app)
+			{
+				MessageBox(_T("Не удалось получить объект KOMPAS.Application.5."), _T("Ошибка"), MB_OK | MB_ICONERROR);
+				return;
+			}
+
+			// 1) строим детали по параметрам, которые пользователь выбирает (editbox-ы)
+			CKompasBuilder builder(app);
+			builder.CreatePoluMufta(halfCouplingData);
+			builder.CreateBoltGOST7817(halfCouplingData, pDoc->GetBolt7817Params());
+			builder.CreateBoltGOST7796(halfCouplingData, pDoc->GetBolt7796Params());
+			builder.CreateGaykaGOST15521(halfCouplingData, pDoc->GetNut15521Params());
+			builder.CreateShaybaGOST6402(halfCouplingData);
+			// 2) сборка
+			builder.CreateSborka();
+
 			CString message;
-			message.Format(_T("Сборка построена успешно!\n\n")
-				_T("Параметры полумуфты:\n")
+			message.Format(_T("Сборка построена и сохранена в C:\\Temp\\\n\n")
 				_T("Исполнение: %d\n")
 				_T("Вариант: %d\n")
-				_T("Момент (M): %.1f Н·м\n")
-				_T("Диаметр (d): %.0f мм\n")
-				_T("Масса: %.2f кг"),
+				_T("M: %.1f Н·м, d: %.0f мм"),
 				execution, variant,
-				halfCouplingData[0], // M
-				halfCouplingData[1], // d
-				halfCouplingData[22]); // mass
-
-			MessageBox(message, _T("Сборка"), MB_OK | MB_ICONINFORMATION);
-
-			// Обновляем статус бар
-			CString statusText;
-			statusText.Format(_T("Сборка построена. M=%.1f, d=%.0f"),
-				halfCouplingData[0], halfCouplingData[1]);
-			m_wndStatusBar.SetPaneText(0, statusText);
+				halfCouplingData[0],
+				halfCouplingData[1]);
+			MessageBox(message, _T("КОМПАС-3D"), MB_OK | MB_ICONINFORMATION);
 		}
 		else
 		{

@@ -37,6 +37,32 @@ public:
 	// Данные полумуфты
 	std::vector<double> GetHalfCouplingData(int execution, int variant);
 
+	// --- Параметры, рассчитанные и показанные в диалогах (editbox-ах) ---
+	struct BoltUIParams
+	{
+		// То, что пользователь видит в диалоге болта
+		double d2 = 0.0;   // 7817: 8.4/10.5; 7796: 9/11 (или другие табличные)
+		int    l  = 0;     // итоговая длина болта l (подобранная по ГОСТ)
+		double k  = 0.0;   // высота головки
+		int    S  = 0;     // размер под ключ
+		int    nominal = 0; // номинал резьбы M8/M10/M12
+	};
+
+	struct NutUIParams
+	{
+		int    nominal = 0;
+		double m = 0.0; // высота гайки
+		int    S = 0;   // размер под ключ
+	};
+
+	void SetBolt7817Params(const BoltUIParams& p) { m_bolt7817 = p; }
+	void SetBolt7796Params(const BoltUIParams& p) { m_bolt7796 = p; }
+	BoltUIParams GetBolt7817Params() const { return m_bolt7817; }
+	BoltUIParams GetBolt7796Params() const { return m_bolt7796; }
+
+	void SetNut15521Params(const NutUIParams& p) { m_nut15521 = p; }
+	NutUIParams GetNut15521Params() const { return m_nut15521; }
+
 	// Переопределение
 public:
 	virtual BOOL OnNewDocument();
@@ -59,6 +85,11 @@ protected:
 	CString m_currentImagePath;
 	int m_execution;
 	int m_variant;
+
+	// Параметры, рассчитанные в диалогах болтов/гайки и показанные в editbox-ах.
+	BoltUIParams m_bolt7817;
+	BoltUIParams m_bolt7796;
+	NutUIParams  m_nut15521;
 
 	// Структура для хранения данных полумуфты
 	struct HalfCouplingData

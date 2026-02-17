@@ -37,6 +37,11 @@ CKURSACHDoc::CKURSACHDoc() noexcept
 
 	// Инициализация данных из JSON
 	InitializeHalfCouplingData();
+
+	// Значения по умолчанию для параметров из диалогов (если диалоги ещё не открывались)
+	m_bolt7817 = BoltUIParams{};
+	m_bolt7796 = BoltUIParams{};
+	m_nut15521 = NutUIParams{};
 }
 
 CKURSACHDoc::~CKURSACHDoc()
@@ -57,6 +62,11 @@ BOOL CKURSACHDoc::OnNewDocument()
 	// Устанавливаем параметры по умолчанию
 	m_execution = 16;
 	m_variant = 1;
+
+	// Сбрасываем параметры из диалогов
+	m_bolt7817 = BoltUIParams{};
+	m_bolt7796 = BoltUIParams{};
+	m_nut15521 = NutUIParams{};
 
 	return TRUE;
 }

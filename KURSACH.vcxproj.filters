@@ -47,6 +47,9 @@
     <ClInclude Include="KURSACHView.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="KompasBuilder.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
     <ClInclude Include="Resource.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
@@ -71,6 +74,9 @@
       <Filter>Исходные файлы</Filter>
     </ClCompile>
     <ClCompile Include="KURSACHView.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="KompasBuilder.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
     <ClCompile Include="pch.cpp">

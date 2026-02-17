@@ -116,5 +116,16 @@ BOOL CBolt7817Dlg::OnInitDialog()
     SetRO(this, IDC_EDIT_B7817_K, FormatSmart(GetK(d_nom)));
     { CString __v; __v.Format(L"%d", GetS7817(d_nom)); SetRO(this, IDC_EDIT_B7817_S, __v); }
 
+    // Сохраняем параметры, которые показали в editbox-ах, в документ
+    {
+        CKURSACHDoc::BoltUIParams p;
+        p.d2 = hole_d2;
+        p.l  = bolt_l;
+        p.k  = GetK(d_nom);
+        p.S  = GetS7817(d_nom);
+        p.nominal = d_nom;
+        m_pDoc->SetBolt7817Params(p);
+    }
+
     return TRUE;
 }

@@ -193,6 +193,7 @@
     <ClInclude Include="KURSACH.h" />
     <ClInclude Include="KURSACHDoc.h" />
     <ClInclude Include="KURSACHView.h" />
+    <ClInclude Include="KompasBuilder.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
@@ -208,6 +209,7 @@
     <ClCompile Include="KURSACH.cpp" />
     <ClCompile Include="KURSACHDoc.cpp" />
     <ClCompile Include="KURSACHView.cpp" />
+    <ClCompile Include="KompasBuilder.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
