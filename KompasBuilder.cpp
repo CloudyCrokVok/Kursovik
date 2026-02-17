@@ -135,7 +135,7 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pCutDef1->SetSideParam(true, etThroughAll, 0, 0, false);
     pCut1->Create();
 
-    // *** ФАСКА НА ТОРЦЕ X≈l (42мм) - 1×1мм ***
+    // ФАСКА НА ТОРЦЕ X≈l (42мм) - 1×1мм ***
     m_part->Update(); // Обновляем для поиска ребер
     ksEntityPtr pChamfer = m_part->NewEntity(o3d_chamfer);
     ksChamferDefinitionPtr pChamferDef = pChamfer->GetDefinition();
@@ -162,7 +162,7 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     }
     pChamfer->Create();
 
-    // *** ФАСКА НА ВЕРХНИЕ РЕБРА ДИСКА (наружный диаметр D) ***
+    // ФАСКА НА ВЕРХНИЕ РЕБРА ДИСКА (наружный диаметр D) ***
     ksEntityPtr pChamferOuter = m_part->NewEntity(o3d_chamfer);
     ksChamferDefinitionPtr pChamferOuterDef = pChamferOuter->GetDefinition();
     pChamferOuterDef->SetChamferParam(true, 1, 1);
@@ -256,6 +256,8 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pCutDef3->SetSketch(pSketchHole3);
     pCutDef3->SetSideParam(true, etThroughAll, 0, 0, false);
     pCut3->Create();
+
+
 
     m_doc->SaveAs(L"C:\\Temp\\Полумуфта.m3d");
 }
@@ -382,22 +384,6 @@ void CKompasBuilder::CreateBoltGOST7817(const std::vector<double>& halfCouplingD
     pExtrudeDef1->SetSideParam(true, etBlind, H_head, 0, false);
     pExtrude1->Create();
 
-    // Цилиндр D1
-    ksEntityPtr pSketch2 = m_part->NewEntity(o3d_sketch);
-    ksSketchDefinitionPtr pSketchDef2 = pSketch2->GetDefinition();
-    pSketchDef2->SetPlane(m_part->GetDefaultEntity(o3d_planeXOZ));
-    pSketch2->Create();
-    p2DDoc = pSketchDef2->BeginEdit();
-    p2DDoc->ksCircle(0, 0, D1 / 2.0, 1);
-    pSketchDef2->EndEdit();
-
-    ksEntityPtr pExtrude2 = m_part->NewEntity(o3d_bossExtrusion);
-    ksBossExtrusionDefinitionPtr pExtrudeDef2 = pExtrude2->GetDefinition();
-    pExtrudeDef2->SetSketch(pSketch2);
-    pExtrudeDef2->directionType = dtNormal;
-    pExtrudeDef2->SetSideParam(true, etBlind, Hl2, 0, false);
-    pExtrude2->Create();
-
     // Цилиндр D2
     ksEntityPtr pSketch3 = m_part->NewEntity(o3d_sketch);
     ksSketchDefinitionPtr pSketchDef3 = pSketch3->GetDefinition();
@@ -429,15 +415,6 @@ void CKompasBuilder::CreateBoltGOST7817(const std::vector<double>& halfCouplingD
     pCutDef->SetSketch(pSketch4);
     pCutDef->SetSideParam(true, etBlind, D2, 0, false);
     pCut->Create();
-
-    // Скругление (упрощенно)
-    ksEntityPtr pFillet = m_part->NewEntity(o3d_fillet);
-    ksFilletDefinitionPtr pFilletDef = pFillet->GetDefinition();
-    pFilletDef->radius = r;
-    ksEntityCollectionPtr fl = pFilletDef->array();
-    fl->Clear();
-    fl->Add(pSketch2);
-    pFillet->Create();
 
     m_doc->SaveAs(L"C:\\Temp\\Болт_ГОСТ7817.m3d");
 }
@@ -495,22 +472,6 @@ void CKompasBuilder::CreateBoltGOST7796(const std::vector<double>& halfCouplingD
     pExtrudeDef1->directionType = dtNormal;
     pExtrudeDef1->SetSideParam(true, etBlind, k, 0, false);
     pExtrude1->Create();
-
-    // Подголовка
-    ksEntityPtr pSketch2 = m_part->NewEntity(o3d_sketch);
-    ksSketchDefinitionPtr pSketchDef2 = pSketch2->GetDefinition();
-    pSketchDef2->SetPlane(m_part->GetDefaultEntity(o3d_planeXOZ));
-    pSketch2->Create();
-    p2DDoc = pSketchDef2->BeginEdit();
-    p2DDoc->ksCircle(0, 0, Dw / 2.0, 1);
-    pSketchDef2->EndEdit();
-
-    ksEntityPtr pExtrude2 = m_part->NewEntity(o3d_bossExtrusion);
-    ksBossExtrusionDefinitionPtr pExtrudeDef2 = pExtrude2->GetDefinition();
-    pExtrudeDef2->SetSketch(pSketch2);
-    pExtrudeDef2->directionType = dtNormal;
-    pExtrudeDef2->SetSideParam(true, etBlind, khw, 0, false);
-    pExtrude2->Create();
 
     // Стержень
     ksEntityPtr pSketch3 = m_part->NewEntity(o3d_sketch);
