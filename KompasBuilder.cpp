@@ -85,9 +85,9 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pSketch->Create();
     ksDocument2DPtr p2DDoc = pSketchDef->BeginEdit();
     p2DDoc->ksLineSeg(0, 0, l, 0, 1);
-    p2DDoc->ksLineSeg(l, 0, l, d0/2, 1);
-    p2DDoc->ksLineSeg(l, d0/2, l1, d0/2, 1);
-    p2DDoc->ksLineSeg(l1, d0/2, l1, D / 2, 1);
+    p2DDoc->ksLineSeg(l, 0, l, d0 / 2, 1);
+    p2DDoc->ksLineSeg(l, d0 / 2, l1, d0 / 2, 1);
+    p2DDoc->ksLineSeg(l1, d0 / 2, l1, D / 2, 1);
     p2DDoc->ksLineSeg(l1, D / 2, 0, D / 2, 1);
     p2DDoc->ksLineSeg(0, D / 2, 0, 0, 1);
     p2DDoc->ksLineSeg(-10, 0, 10, 0, 3);
@@ -100,6 +100,7 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pRotDef->SetSideParam(TRUE, 360);
     pRotate->Create();
 
+    // ПЛОСКОСТЬ ДЛЯ ОТВЕРСТИЙ
     ksEntityCollectionPtr faces = m_part->EntityCollection(o3d_face);
     ksEntityPtr endFace = nullptr;
     for (int i = 0; i < faces->GetCount(); i++)
@@ -109,7 +110,6 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
         if (def->IsPlanar()) { endFace = face; break; }
     }
 
-    // Создание смещенной плоскости на l-l1
     ksEntityPtr pPlane = m_part->NewEntity(o3d_planeOffset);
     ksPlaneOffsetDefinitionPtr pPlaneDef = pPlane->GetDefinition();
     pPlaneDef->direction = true;
@@ -117,17 +117,17 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pPlaneDef->SetPlane(endFace);
     pPlane->Create();
 
-    // Отверстие в центре полумуфты №2
+    // ОТВЕРСТИЯ
+    // Центральное
     ksEntityPtr pSketchHole1 = m_part->NewEntity(o3d_sketch);
     ksSketchDefinitionPtr pSketchHoleDef1 = pSketchHole1->GetDefinition();
     pSketchHoleDef1->SetPlane(pPlane);
     pSketchHole1->Create();
     ksDocument2DPtr p2DDocHole1 = pSketchHoleDef1->BeginEdit();
-    p2DDocHole1->ksCircle(0, 0, d/2, 1);
+    p2DDocHole1->ksCircle(0, 0, d / 2, 1);
     p2DDocHole1->ksLineSeg(-10, 0, 10, 0, 3);
     pSketchHoleDef1->EndEdit();
 
-    // Создание выреза
     ksEntityPtr pCut1 = m_part->NewEntity(o3d_cutExtrusion);
     ksCutExtrusionDefinitionPtr pCutDef1 = pCut1->GetDefinition();
     pCutDef1->directionType = dtNormal;
@@ -135,39 +135,68 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pCutDef1->SetSideParam(true, etThroughAll, 0, 0, false);
     pCut1->Create();
 
-    // ФАСКА НА ТОРЦЕ X≈l (42мм) - 1×1мм ***
-    m_part->Update(); // Обновляем для поиска ребер
+    // ========== ФАСКИ 1мм + ФАСКИ ОТВЕРСТИЙ 0.5мм ==========
+    m_part->Update(); // Обновляем для фасок
+
+    // ФАСКА ТОРЦА X≈l
     ksEntityPtr pChamfer = m_part->NewEntity(o3d_chamfer);
     ksChamferDefinitionPtr pChamferDef = pChamfer->GetDefinition();
-    pChamferDef->SetChamferParam(true, 1, 1); // 1мм × 1мм
+    pChamferDef->SetChamferParam(true, 1, 1);
     ksEntityCollectionPtr fl = pChamferDef->array();
     fl->Clear();
 
-    // Поиск торцевых ребер (X≈l)
+    // ФАСКИ ОТВЕРСТИЙ
+    ksEntityPtr pChamferHole1 = m_part->NewEntity(o3d_chamfer);
+    ksChamferDefinitionPtr pChamferHole1Def = pChamferHole1->GetDefinition();
+    pChamferHole1Def->SetChamferParam(true, 0.5, 0.5);
+    ksEntityCollectionPtr flHole1 = pChamferHole1Def->array();
+    flHole1->Clear();
+
+    ksEntityPtr pChamferHole2 = m_part->NewEntity(o3d_chamfer);
+    ksChamferDefinitionPtr pChamferHole2Def = pChamferHole2->GetDefinition();
+    pChamferHole2Def->SetChamferParam(true, 0.5, 0.5);
+    ksEntityCollectionPtr flHole2 = pChamferHole2Def->array();
+    flHole2->Clear();
+
+    // НОВЫЕ edges после всех отверстий
     ksEntityCollectionPtr edges = m_part->EntityCollection(o3d_edge);
+
     for (int i = 0; i < edges->GetCount(); i++)
     {
         ksEntityPtr edge = edges->GetByIndex(i);
+        if (!edge) continue;
         ksEdgeDefinitionPtr def = edge->GetDefinition();
+        if (!def) continue;
+
         ksVertexDefinitionPtr v1 = def->GetVertex(true);
-        if (v1)
+        if (!v1) continue;
+
+        double x1, y1, z1;
+        v1->GetPoint(&x1, &y1, &z1);
+        double r1 = sqrt(y1 * y1 + z1 * z1);
+
+        // ФАСКА ТОРЦА X≈l
+        if (fabs(x1 - l) < 1.0)
+            fl->Add(edge);
+
+        // ФАСКИ ОТВЕРСТИЙ (R≈4.2мм или 4.5мм, X≈0)
+        if (fabs(x1) < 10.0 &&
+            ((fabs(r1 - d3 / 2) < 0.6) || (fabs(r1 - d4 / 2) < 0.6)))
         {
-            double x1, y1, z1;
-            v1->GetPoint(&x1, &y1, &z1);
-            if (fabs(x1 - l) < 1.0) // Торцевые ребра на X≈42
-            {
-                fl->Add(edge);
-            }
+            flHole1->Add(edge);
+            flHole2->Add(edge);
         }
     }
+
     pChamfer->Create();
 
-    // ФАСКА НА ВЕРХНИЕ РЕБРА ДИСКА (наружный диаметр D) ***
+    // ОСТАЛЬНЫЕ ФАСКИ/СКРУГЛЕНИЯ
     ksEntityPtr pChamferOuter = m_part->NewEntity(o3d_chamfer);
     ksChamferDefinitionPtr pChamferOuterDef = pChamferOuter->GetDefinition();
     pChamferOuterDef->SetChamferParam(true, 1, 1);
     ksEntityCollectionPtr flOuter = pChamferOuterDef->array();
     flOuter->Clear();
+
     double outerR = D / 2.0;
     for (int i = 0; i < edges->GetCount(); i++)
     {
@@ -176,16 +205,11 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
         if (!def) continue;
         ksVertexDefinitionPtr v1 = def->GetVertex(true);
         if (!v1) continue;
-
         double x1, y1, z1;
         v1->GetPoint(&x1, &y1, &z1);
         double rad = sqrt(y1 * y1 + z1 * z1);
-
-        // ребро на торце X=0 или X=l1 и радиус ≈ внешнему
         if ((fabs(x1) < 1.0 || fabs(x1 - l1) < 1.0) && fabs(rad - outerR) < 1.0)
-        {
             flOuter->Add(edge);
-        }
     }
     pChamferOuter->Create();
 
@@ -194,42 +218,31 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pFilletDef2->radius = R;
     ksEntityCollectionPtr fl2 = pFilletDef2->array();
     fl2->Clear();
-    double outerRadius = D / 2.0;
     for (int i = 0; i < edges->GetCount(); i++)
     {
         ksEntityPtr edge = edges->GetByIndex(i);
         ksEdgeDefinitionPtr def = edge->GetDefinition();
         if (!def) continue;
-
-        // Берём первую вершину ребра (можно также вторую)
         ksVertexDefinitionPtr v1 = def->GetVertex(true);
         if (!v1) continue;
-
         double x1, y1, z1;
         v1->GetPoint(&x1, &y1, &z1);
-
-        // Проверяем, что ребро находится на нужном торце (x ≈ l1)
         if (fabs(x1 - l1) < 2.0)
         {
             double radius = sqrt(y1 * y1 + z1 * z1);
-            // Если радиус меньше наружного, добавляем ребро (это внутренние рёбра)
-            if (radius < outerRadius - 1.0)  // допуск 1 мм
-            {
+            if (radius < outerR - 1.0)
                 fl2->Add(edge);
-            }
         }
     }
     pFillet2->Create();
 
-    // Эскиз для отверстия для болтов
-
-    // Для болта 7817 №3
+    // Болт 7817 №3 (d3=8.4мм)
     ksEntityPtr pSketchHole2 = m_part->NewEntity(o3d_sketch);
     ksSketchDefinitionPtr pSketchHoleDef2 = pSketchHole2->GetDefinition();
     pSketchHoleDef2->SetPlane(pPlane);
     pSketchHole2->Create();
     ksDocument2DPtr p2DDocHole2 = pSketchHoleDef2->BeginEdit();
-    p2DDocHole2->ksCircle(0, -D1/2, d3/2, 1);
+    p2DDocHole2->ksCircle(0, -D1 / 2, d3 / 2, 1);
     p2DDocHole2->ksLineSeg(-10, 0, 10, 0, 3);
     pSketchHoleDef2->EndEdit();
 
@@ -240,7 +253,7 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pCutDef2->SetSideParam(true, etThroughAll, 0, 0, false);
     pCut2->Create();
 
-    // Для болта 7796 №4
+    // Болт 7796 №4 (d4=9.0мм)
     ksEntityPtr pSketchHole3 = m_part->NewEntity(o3d_sketch);
     ksSketchDefinitionPtr pSketchHoleDef3 = pSketchHole3->GetDefinition();
     pSketchHoleDef3->SetPlane(pPlane);
@@ -259,8 +272,33 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
 
 
 
-    m_doc->SaveAs(L"C:\\Temp\\Полумуфта.m3d");
+
+    // ========== МАРКЕРЫ (НОВЫЕ faces/edges) ==========
+    m_part->Update();
+    ksEntityCollectionPtr allFaces = m_part->EntityCollection(o3d_face);
+
+    // Центральное отверстие
+    for (int i = 0; i < allFaces->GetCount(); i++)
+    {
+        ksEntityPtr face = allFaces->GetByIndex(i);
+        if (!face) continue;
+        ksFaceDefinitionPtr def = face->GetDefinition();
+        if (!def || !def->IsCylinder()) continue;
+        double height, radius;
+        def->GetCylinderParam(&height, &radius);
+        if (fabs(radius - d / 2.0) < 0.1)
+        {
+            face->Putname(L"CentralHole");
+            face->Update();
+            break;
+        }
+    }
+
+    m_part->Update();
+    m_doc->SaveAs(L"C:\\\\Temp\\\\Полумуфта.m3d");
 }
+
+
 
 void CKompasBuilder::CreateGaykaGOST15521(const std::vector<double>& halfCouplingData, const CKURSACHDoc::NutUIParams& ui)
 {
