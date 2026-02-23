@@ -497,6 +497,7 @@ void CKompasBuilder::CreateBoltGOST7817(const std::vector<double>& halfCouplingD
     pCutDef->SetSideParam(true, etBlind, D2, 0, false);
     pCut->Create();
 
+    // Маркера
     ksEntityCollectionPtr allFacesBolt = m_part->EntityCollection(o3d_face);
     // Маркер стержня (цилиндр D2)
     for (int i = 0; i < allFacesBolt->GetCount(); i++) {
@@ -509,6 +510,21 @@ void CKompasBuilder::CreateBoltGOST7817(const std::vector<double>& halfCouplingD
         def->GetCylinderParam(&height, &radius);
         if (fabs(radius - D2 / 2.0) < 0.1) {  // D2 = номинал болта (10мм)
             face->Putname(L"Bolt7817_Shaft");
+            face->Update();
+            break;
+        }
+    }
+
+    // Маркер головки болта - ищем по координатам Z через bounding box
+    for (int i = 0; i < allFacesBolt->GetCount(); i++) {
+        ksEntityPtr face = allFacesBolt->GetByIndex(i);
+        if (!face) continue;
+        ksFaceDefinitionPtr def = face->GetDefinition();
+        if (!def) continue;
+
+        // Если это не цилиндр и это плоская грань - это головка
+        if (!def->IsCylinder() && def->IsPlanar()) {
+            face->Putname(L"Bolt7817_Head");
             face->Update();
             break;
         }
@@ -605,11 +621,26 @@ void CKompasBuilder::CreateBoltGOST7796(const std::vector<double>& dh, const CKU
         }
     }
 
+    // Маркер головки болта - ищем по координатам Z через bounding box
+    for (int i = 0; i < allFacesBolt->GetCount(); i++) {
+        ksEntityPtr face = allFacesBolt->GetByIndex(i);
+        if (!face) continue;
+        ksFaceDefinitionPtr def = face->GetDefinition();
+        if (!def) continue;
+
+        // Если это не цилиндр и это плоская грань - это головка
+        if (!def->IsCylinder() && def->IsPlanar()) {
+            face->Putname(L"Bolt7796_Head");
+            face->Update();
+            break;
+        }
+    }
+
     m_doc->SaveAs(L"C:\\\\Temp\\\\Болт_ГОСТ7796.m3d");
 }
 
 
-void CKompasBuilder::CreateShaybaGOST6402(const std::vector<double>& halfCouplingData)
+void CKompasBuilder::CreateShaybaGOST6402(const std::vector<double>& dh)
 {
     // Проверка основных указателей
     if (!m_app) {
@@ -630,7 +661,7 @@ void CKompasBuilder::CreateShaybaGOST6402(const std::vector<double>& halfCouplin
         return;
     }
 
-    const double hole = GetD(halfCouplingData, 12, 9.0);
+    const double hole = GetD(dh, 14, 9.0);
     const int nominal = NominalFromHole(hole);
     const double d = (double)nominal;
     const double s = 1.6;
@@ -668,22 +699,14 @@ void CKompasBuilder::CreateShaybaGOST6402(const std::vector<double>& halfCouplin
     pExtrudeDef2->SetSideParam(true, etBlind, s, 0, false);
     pExtrude2->Create();
 
-    // ---- Перестроение документа перед работой с гранями (как в вашем примере) ----
+    // Перестроение документа перед работой с гранями 
     m_doc->RebuildDocument();
     m_part->Update();
 
-    // ---- Маркировка граней (аналогично WSCADDlg.cpp) ----
+    //  Маркировка 
     ksEntityCollectionPtr allFaces = m_part->EntityCollection(o3d_face);
-    if (!allFaces) {
-        AfxMessageBox(L"Не удалось получить коллекцию граней");
-        return;
-    }
-    long count = allFaces->GetCount();
-    if (count == 0) {
-        AfxMessageBox(L"Коллекция граней пуста");
-        return;
-    }
 
+    long count = allFaces->GetCount();
     // 1. Маркировка цилиндрической поверхности отверстия
     for (long i = 0; i < count; i++)
     {
