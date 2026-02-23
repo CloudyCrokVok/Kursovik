@@ -403,6 +403,69 @@ void CKompasBuilder::CreateGaykaGOST15521(const std::vector<double>& dh, const C
     pCutDef->SetSideParam(true, etBlind, m, 0, false);
     pCut->Create();
 
+    // Маркировка 
+    ksEntityCollectionPtr allFaces = m_part->EntityCollection(o3d_face);
+    long count = allFaces->GetCount();
+    // Маркировка цилиндрической поверхности отверстия
+    for (long i = 0; i < count; i++)
+    {
+        ksEntityPtr face = allFaces->GetByIndex(i);
+        if (!face) continue;
+        ksFaceDefinitionPtr def = face->GetDefinition();
+        if (!def) continue;
+        if (!def->IsCylinder()) continue;
+
+        double height, radius;
+        def->GetCylinderParam(&height, &radius);
+        if (fabs(radius - d / 2.0) < 0.1)
+        {
+            face->Putname(L"HoleFace");
+            face->Update();
+            break;
+        }
+    }
+
+    int torceCount = 0;
+
+    // Первый проход - ищем первую торцевую грань
+    for (long i = 0; i < count; i++)
+    {
+        ksEntityPtr face = allFaces->GetByIndex(i);
+        if (!face) continue;
+        ksFaceDefinitionPtr def = face->GetDefinition();
+        if (!def) continue;
+
+        if (def->IsPlanar() && !def->IsCylinder())
+        {
+            face->Putname(L"Gayka_LeftSide");
+            face->Update();
+            torceCount = 1;
+            break;
+        }
+    }
+
+    // Второй проход - ищем вторую торцевую грань
+    for (long i = 0; i < count; i++)
+    {
+        ksEntityPtr face = allFaces->GetByIndex(i);
+        if (!face) continue;
+        ksFaceDefinitionPtr def = face->GetDefinition();
+        if (!def) continue;
+
+        if (def->IsPlanar() && !def->IsCylinder())
+        {
+            BSTR name = face->Getname();
+
+            if (name == NULL || wcslen(name) == 0) // Если имя пустое - это вторая грань
+            {
+                face->Putname(L"Gayka_RightSide");
+                face->Update();
+                torceCount = 2;
+                break;
+            }
+        }
+    }
+
     m_doc->SaveAs(L"C:\\Temp\\Гайка_ГОСТ15521.m3d");
 }
 
@@ -642,25 +705,12 @@ void CKompasBuilder::CreateBoltGOST7796(const std::vector<double>& dh, const CKU
 
 void CKompasBuilder::CreateShaybaGOST6402(const std::vector<double>& dh)
 {
-    // Проверка основных указателей
-    if (!m_app) {
-        AfxMessageBox(L"Ошибка: m_app не инициализирован");
-        return;
-    }
+    // Создание документа
     m_doc = m_app->Document3D();
-    if (!m_doc) {
-        AfxMessageBox(L"Ошибка: не удалось получить документ");
-        return;
-    }
-
-    // Создание документа и получение части
     m_doc->Create(false, true);
     m_part = m_doc->GetPart(pTop_Part);
-    if (!m_part) {
-        AfxMessageBox(L"Ошибка: не удалось получить часть");
-        return;
-    }
 
+    // Параметры
     const double hole = GetD(dh, 14, 9.0);
     const int nominal = NominalFromHole(hole);
     const double d = (double)nominal;
@@ -668,7 +718,7 @@ void CKompasBuilder::CreateShaybaGOST6402(const std::vector<double>& dh)
     const double b = 2.0;
     const double db = d + b;
 
-    // ---- Построение геометрии ----
+    // Построение геометрии
     ksEntityPtr pSketch1 = m_part->NewEntity(o3d_sketch);
     ksSketchDefinitionPtr pSketchDef1 = pSketch1->GetDefinition();
     pSketchDef1->SetPlane(m_part->GetDefaultEntity(o3d_planeXOZ));
@@ -722,6 +772,37 @@ void CKompasBuilder::CreateShaybaGOST6402(const std::vector<double>& dh)
         {
             face->Putname(L"HoleFace");
             face->Update();
+            break;
+        }
+    }
+
+
+    // Маркировка правой и левой стороны шайбы
+    int leftMarked = 0;
+    int rightMarked = 0;
+    for (long i = 0; i < count; i++)
+    {
+        ksEntityPtr face = allFaces->GetByIndex(i);
+        if (!face) continue;
+        ksFaceDefinitionPtr def = face->GetDefinition();
+        if (!def) continue;
+
+        // Ищем плоские грани (торцы шайбы)
+        if (!def->IsPlanar()) continue;
+
+        // Маркируем первую плоскую грань как левую сторону
+        if (leftMarked == 0)
+        {
+            face->Putname(L"Shayba_LeftSide");
+            face->Update();
+            leftMarked = 1;
+        }
+        // Маркируем вторую плоскую грань как правую сторону
+        else if (rightMarked == 0)
+        {
+            face->Putname(L"Shayba_RightSide");
+            face->Update();
+            rightMarked = 1;
             break;
         }
     }
