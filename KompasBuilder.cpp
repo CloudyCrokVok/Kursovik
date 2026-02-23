@@ -135,7 +135,7 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pCutDef1->SetSideParam(true, etThroughAll, 0, 0, false);
     pCut1->Create();
 
-    // ========== ФАСКИ 1мм + ФАСКИ ОТВЕРСТИЙ 0.5мм ==========
+    // ========== ФАСКИ ТОРЦА И НАРУЖНЫЕ (без отверстий) ==========
     m_part->Update(); // Обновляем для фасок
 
     // ФАСКА ТОРЦА X≈l
@@ -144,19 +144,6 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pChamferDef->SetChamferParam(true, 1, 1);
     ksEntityCollectionPtr fl = pChamferDef->array();
     fl->Clear();
-
-    // ФАСКИ ОТВЕРСТИЙ
-    ksEntityPtr pChamferHole1 = m_part->NewEntity(o3d_chamfer);
-    ksChamferDefinitionPtr pChamferHole1Def = pChamferHole1->GetDefinition();
-    pChamferHole1Def->SetChamferParam(true, 0.5, 0.5);
-    ksEntityCollectionPtr flHole1 = pChamferHole1Def->array();
-    flHole1->Clear();
-
-    ksEntityPtr pChamferHole2 = m_part->NewEntity(o3d_chamfer);
-    ksChamferDefinitionPtr pChamferHole2Def = pChamferHole2->GetDefinition();
-    pChamferHole2Def->SetChamferParam(true, 0.5, 0.5);
-    ksEntityCollectionPtr flHole2 = pChamferHole2Def->array();
-    flHole2->Clear();
 
     // НОВЫЕ edges после всех отверстий
     ksEntityCollectionPtr edges = m_part->EntityCollection(o3d_edge);
@@ -178,16 +165,7 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
         // ФАСКА ТОРЦА X≈l
         if (fabs(x1 - l) < 1.0)
             fl->Add(edge);
-
-        // ФАСКИ ОТВЕРСТИЙ (R≈4.2мм или 4.5мм, X≈0)
-        if (fabs(x1) < 10.0 &&
-            ((fabs(r1 - d3 / 2) < 0.6) || (fabs(r1 - d4 / 2) < 0.6)))
-        {
-            flHole1->Add(edge);
-            flHole2->Add(edge);
-        }
     }
-
     pChamfer->Create();
 
     // ОСТАЛЬНЫЕ ФАСКИ/СКРУГЛЕНИЯ
@@ -270,7 +248,56 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pCutDef3->SetSideParam(true, etThroughAll, 0, 0, false);
     pCut3->Create();
 
+    // ФАСКИ ОТВЕРСТИЙ ПО РАДИУСУ 27.5мм ТОЛЬКО ЛИЦЕВАЯ СТОРОНА
+    m_part->Update();
 
+    ksEntityPtr pChamferHole3 = m_part->NewEntity(o3d_chamfer);
+    ksChamferDefinitionPtr def3 = pChamferHole3->GetDefinition();
+    def3->SetChamferParam(true, 1, 1);
+    ksEntityCollectionPtr edges3 = def3->array();
+
+    ksEntityPtr pChamferHole4 = m_part->NewEntity(o3d_chamfer);
+    ksChamferDefinitionPtr def4 = pChamferHole4->GetDefinition();
+    def4->SetChamferParam(true, 1, 1);
+    ksEntityCollectionPtr edges4 = def4->array();
+
+    ksEntityCollectionPtr allEdges = m_part->EntityCollection(o3d_edge);
+
+    for (int i = 0; i < allEdges->GetCount(); i++) {
+        ksEntityPtr edge = allEdges->GetByIndex(i);
+        ksEdgeDefinitionPtr edef = edge->GetDefinition();
+        if (!edef) continue;
+
+        ksVertexDefinitionPtr v1 = edef->GetVertex(true);
+        ksVertexDefinitionPtr v2 = edef->GetVertex(false);
+
+        if (v1) {
+            double x1, y1, z1;
+            v1->GetPoint(&x1, &y1, &z1);
+            double dist1 = sqrt(y1 * y1 + z1 * z1);
+
+            // ДОБАВЛЕНО: Только лицевая сторона X≈(l-l1)
+            if (fabs(x1 - (l - l1)) < 1.0 && fabs(dist1 - 27.5) < 0.5) {
+                if (fabs(y1) > fabs(z1)) edges3->Add(edge);
+                else edges4->Add(edge);
+            }
+        }
+
+        if (v2) {
+            double x2, y2, z2;
+            v2->GetPoint(&x2, &y2, &z2);
+            double dist2 = sqrt(y2 * y2 + z2 * z2);
+
+            if (fabs(x2 - (l - l1)) < 1.0 && fabs(dist2 - 27.5) < 0.5) {
+                if (fabs(y2) > fabs(z2)) edges3->Add(edge);
+                else edges4->Add(edge);
+            }
+        }
+    }
+
+    pChamferHole3->Create();
+    pChamferHole4->Create();
+    m_part->Update();
 
 
     // ========== МАРКЕРЫ (НОВЫЕ faces/edges) ==========
@@ -297,8 +324,6 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     m_part->Update();
     m_doc->SaveAs(L"C:\\\\Temp\\\\Полумуфта.m3d");
 }
-
-
 
 void CKompasBuilder::CreateGaykaGOST15521(const std::vector<double>& halfCouplingData, const CKURSACHDoc::NutUIParams& ui)
 {
@@ -532,19 +557,33 @@ void CKompasBuilder::CreateBoltGOST7796(const std::vector<double>& halfCouplingD
 
 void CKompasBuilder::CreateShaybaGOST6402(const std::vector<double>& halfCouplingData)
 {
+    // Проверка основных указателей
+    if (!m_app) {
+        AfxMessageBox(L"Ошибка: m_app не инициализирован");
+        return;
+    }
     m_doc = m_app->Document3D();
+    if (!m_doc) {
+        AfxMessageBox(L"Ошибка: не удалось получить документ");
+        return;
+    }
+
+    // Создание документа и получение части
     m_doc->Create(false, true);
     m_part = m_doc->GetPart(pTop_Part);
+    if (!m_part) {
+        AfxMessageBox(L"Ошибка: не удалось получить часть");
+        return;
+    }
 
-    // Отверстие шайбы — под болт 7796 (номинал по отверстию 9/11)
     const double hole = GetD(halfCouplingData, 12, 9.0);
     const int nominal = NominalFromHole(hole);
-
     const double d = (double)nominal;
-    const double s = 1.6; // толщина (если у вас есть поле – можно привязать)
+    const double s = 1.6;
     const double b = 2.0;
     const double db = d + b;
 
+    // ---- Построение геометрии ----
     ksEntityPtr pSketch1 = m_part->NewEntity(o3d_sketch);
     ksSketchDefinitionPtr pSketchDef1 = pSketch1->GetDefinition();
     pSketchDef1->SetPlane(m_part->GetDefaultEntity(o3d_planeXOZ));
@@ -575,9 +614,44 @@ void CKompasBuilder::CreateShaybaGOST6402(const std::vector<double>& halfCouplin
     pExtrudeDef2->SetSideParam(true, etBlind, s, 0, false);
     pExtrude2->Create();
 
+    // ---- Перестроение документа перед работой с гранями (как в вашем примере) ----
+    m_doc->RebuildDocument();
+    m_part->Update();
+
+    // ---- Маркировка граней (аналогично WSCADDlg.cpp) ----
+    ksEntityCollectionPtr allFaces = m_part->EntityCollection(o3d_face);
+    if (!allFaces) {
+        AfxMessageBox(L"Не удалось получить коллекцию граней");
+        return;
+    }
+    long count = allFaces->GetCount();
+    if (count == 0) {
+        AfxMessageBox(L"Коллекция граней пуста");
+        return;
+    }
+
+    // 1. Маркировка цилиндрической поверхности отверстия
+    for (long i = 0; i < count; i++)
+    {
+        ksEntityPtr face = allFaces->GetByIndex(i);
+        if (!face) continue;
+        ksFaceDefinitionPtr def = face->GetDefinition();
+        if (!def) continue;
+        if (!def->IsCylinder()) continue;
+
+        double height, radius;
+        def->GetCylinderParam(&height, &radius);
+        if (fabs(radius - d / 2.0) < 0.1)
+        {
+            face->Putname(L"HoleFace");
+            face->Update();
+            break;
+        }
+    }
+
+    // Сохранение
     m_doc->SaveAs(L"C:\\Temp\\Шайба_ГОСТ6402.m3d");
 }
-
 void CKompasBuilder::CreateSborka()
 {
     m_doc = m_app->Document3D();
