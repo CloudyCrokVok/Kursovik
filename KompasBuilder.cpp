@@ -343,7 +343,7 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     m_doc->SaveAs(L"C:\\\\Temp\\\\Полумуфта.m3d");
 }
 
-void CKompasBuilder::CreateGaykaGOST15521(const std::vector<double>& halfCouplingData, const CKURSACHDoc::NutUIParams& ui)
+void CKompasBuilder::CreateGaykaGOST15521(const std::vector<double>& dh, const CKURSACHDoc::NutUIParams& ui)
 {
     m_doc = m_app->Document3D();
     m_doc->Create(false, true);
@@ -351,7 +351,7 @@ void CKompasBuilder::CreateGaykaGOST15521(const std::vector<double>& halfCouplin
 
     // Гайка: используем параметры из диалога (editbox-ов).
     // Если диалог не открывали, оставляем безопасный fallback на номинал по отверстиям.
-    const double hole_for_7796 = GetD(halfCouplingData, 12, 9.0);
+    const double hole_for_7796 = GetD(dh, 14, 9.0);
     const int nominal = (ui.nominal > 0) ? ui.nominal : NominalFromHole(hole_for_7796);
 
     const double S = (ui.S > 0) ? (double)ui.S : WrenchS(nominal);
@@ -497,6 +497,23 @@ void CKompasBuilder::CreateBoltGOST7817(const std::vector<double>& halfCouplingD
     pCutDef->SetSideParam(true, etBlind, D2, 0, false);
     pCut->Create();
 
+    ksEntityCollectionPtr allFacesBolt = m_part->EntityCollection(o3d_face);
+    // Маркер стержня (цилиндр D2)
+    for (int i = 0; i < allFacesBolt->GetCount(); i++) {
+        ksEntityPtr face = allFacesBolt->GetByIndex(i);
+        if (!face) continue;
+        ksFaceDefinitionPtr def = face->GetDefinition();
+        if (!def || !def->IsCylinder()) continue;
+
+        double height, radius;
+        def->GetCylinderParam(&height, &radius);
+        if (fabs(radius - D2 / 2.0) < 0.1) {  // D2 = номинал болта (10мм)
+            face->Putname(L"Bolt7817_Shaft");
+            face->Update();
+            break;
+        }
+    }
+
     m_doc->SaveAs(L"C:\\Temp\\Болт_ГОСТ7817.m3d");
 }
 
@@ -569,6 +586,24 @@ void CKompasBuilder::CreateBoltGOST7796(const std::vector<double>& dh, const CKU
     pExtrudeDef3->directionType = dtNormal;
     pExtrudeDef3->SetSideParam(true, etBlind, khwl, 0, false);
     pExtrude3->Create();
+
+    ksEntityCollectionPtr allFacesBolt = m_part->EntityCollection(o3d_face);
+
+    // Маркер стержня (цилиндр с радиусом hole/2)
+    for (int i = 0; i < allFacesBolt->GetCount(); i++) {
+        ksEntityPtr face = allFacesBolt->GetByIndex(i);
+        if (!face) continue;
+        ksFaceDefinitionPtr def = face->GetDefinition();
+        if (!def || !def->IsCylinder()) continue;
+
+        double height, radius;
+        def->GetCylinderParam(&height, &radius);
+        if (fabs(radius - hole / 2.0) < 0.1) {  // hole = 9.0мм
+            face->Putname(L"Bolt7796_Shaft");
+            face->Update();
+            break;
+        }
+    }
 
     m_doc->SaveAs(L"C:\\\\Temp\\\\Болт_ГОСТ7796.m3d");
 }
