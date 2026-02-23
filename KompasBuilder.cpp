@@ -248,7 +248,7 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
     pCutDef3->SetSideParam(true, etThroughAll, 0, 0, false);
     pCut3->Create();
 
-    // ФАСКИ ОТВЕРСТИЙ ПО РАДИУСУ 27.5мм ТОЛЬКО ЛИЦЕВАЯ СТОРОНА
+    // ФАСКИ ОТВЕРСТИЙ ПО РАДИУСУ 27.5мм ОТ ЦЕНТРА
     m_part->Update();
 
     ksEntityPtr pChamferHole3 = m_part->NewEntity(o3d_chamfer);
@@ -271,34 +271,29 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
         ksVertexDefinitionPtr v1 = edef->GetVertex(true);
         ksVertexDefinitionPtr v2 = edef->GetVertex(false);
 
+        // Проверяем координаты вершин на расстояние 27.5 от центра
         if (v1) {
             double x1, y1, z1;
             v1->GetPoint(&x1, &y1, &z1);
             double dist1 = sqrt(y1 * y1 + z1 * z1);
 
-            // ДОБАВЛЕНО: Только лицевая сторона X≈(l-l1)
-            if (fabs(x1 - (l - l1)) < 1.0 && fabs(dist1 - 27.5) < 0.5) {
-                if (fabs(y1) > fabs(z1)) edges3->Add(edge);
-                else edges4->Add(edge);
+            if (fabs(dist1 - 27.5) < 0.5) {
+                if (fabs(y1) > fabs(z1)) edges3->Add(edge);  // d3 нижнее
+                else edges4->Add(edge);                       // d4 верхнее
             }
         }
-
         if (v2) {
             double x2, y2, z2;
             v2->GetPoint(&x2, &y2, &z2);
             double dist2 = sqrt(y2 * y2 + z2 * z2);
 
-            if (fabs(x2 - (l - l1)) < 1.0 && fabs(dist2 - 27.5) < 0.5) {
+            if (fabs(dist2 - 27.5) < 0.5) {
                 if (fabs(y2) > fabs(z2)) edges3->Add(edge);
                 else edges4->Add(edge);
             }
         }
     }
-
     pChamferHole3->Create();
-    pChamferHole4->Create();
-    m_part->Update();
-
 
     // ========== МАРКЕРЫ (НОВЫЕ faces/edges) ==========
     m_part->Update();
@@ -318,6 +313,29 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
             face->Putname(L"CentralHole");
             face->Update();
             break;
+        }
+    }
+    m_part->Update();
+
+    // ========== МАРКЕРЫ ОТВЕРСТИЙ ==========
+    for (int i = 0; i < allFaces->GetCount(); i++) {
+        ksEntityPtr face = allFaces->GetByIndex(i);
+        if (!face) continue;
+        ksFaceDefinitionPtr def = face->GetDefinition();
+        if (!def || !def->IsCylinder()) continue;
+
+        double height, radius;
+        def->GetCylinderParam(&height, &radius);
+
+        // Отверстие 8.4мм (№3)
+        if (fabs(radius - d3 / 2.0) < 0.1) {
+            face->Putname(L"Hole_GOST7817");
+            face->Update();
+        }
+        // Отверстие 9.0мм (№4)
+        if (fabs(radius - d4 / 2.0) < 0.1) {
+            face->Putname(L"Hole_GOST7796");
+            face->Update();
         }
     }
 
