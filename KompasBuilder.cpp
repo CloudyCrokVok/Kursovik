@@ -277,7 +277,7 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
             v1->GetPoint(&x1, &y1, &z1);
             double dist1 = sqrt(y1 * y1 + z1 * z1);
 
-            if (fabs(dist1 - 27.5) < 0.5) {
+            if (fabs(dist1 - D1/2) < 0.5) {
                 if (fabs(y1) > fabs(z1)) edges3->Add(edge);  // d3 нижнее
                 else edges4->Add(edge);                       // d4 верхнее
             }
@@ -500,23 +500,23 @@ void CKompasBuilder::CreateBoltGOST7817(const std::vector<double>& halfCouplingD
     m_doc->SaveAs(L"C:\\Temp\\Болт_ГОСТ7817.m3d");
 }
 
-void CKompasBuilder::CreateBoltGOST7796(const std::vector<double>& halfCouplingData, const CKURSACHDoc::BoltUIParams& ui)
+void CKompasBuilder::CreateBoltGOST7796(const std::vector<double>& dh, const CKURSACHDoc::BoltUIParams& ui)
 {
     m_doc = m_app->Document3D();
     m_doc->Create(false, true);
     m_part = m_doc->GetPart(pTop_Part);
 
     // 7796: берём параметры из диалога (editbox-ов)
-    const double hole = (ui.d2 > 0.0) ? ui.d2 : GetD(halfCouplingData, 12, 9.0);
+    const double hole = (ui.d2 > 0.0) ? ui.d2 : GetD(dh, 16, 9.0);
     const int nominal = (ui.nominal > 0) ? ui.nominal : NominalFromHole(hole);
 
     const double S = (ui.S > 0) ? (double)ui.S : WrenchS(nominal);
     const double k = (ui.k > 0.0) ? ui.k : NutHeightM(nominal);
-    const double Dw = GetD(halfCouplingData, 13, 10.5); // d1 как диаметр подголовки (приближение)
-    const double hw = 0.0;                      // В ДИАЛОГЕ 7796 hw нет (и здесь не используем)
+    const double Dw = GetD(dh, 13, 10.5); // d1 как диаметр подголовки (приближение)
+    const double hw = 0.0;                     
 
-    const int n = GetI(halfCouplingData, 15, 0);
-    const double l1 = GetD(halfCouplingData, 19, 24.5);
+    const int n = GetI(dh, 15, 0);
+    const double l1 = GetD(dh, 19, 24.5);
     const double mNut = NutHeightM(nominal);
     const double l = (ui.l > 0) ? (double)ui.l : (2.0 * l1 + (double)n + mNut); // итоговая длина из диалога
 
@@ -533,8 +533,8 @@ void CKompasBuilder::CreateBoltGOST7796(const std::vector<double>& halfCouplingD
     pSketch1->Create();
     ksDocument2DPtr p2DDoc = pSketchDef1->BeginEdit();
     const double R_out = S / std::sqrt(3.0);
-    const double x1 = R_out * std::cos(PI / 6),  y1 = R_out * std::sin(PI / 6);
-    const double x2 = R_out * std::cos(PI / 2),  y2 = R_out * std::sin(PI / 2);
+    const double x1 = R_out * std::cos(PI / 6), y1 = R_out * std::sin(PI / 6);
+    const double x2 = R_out * std::cos(PI / 2), y2 = R_out * std::sin(PI / 2);
     const double x3 = R_out * std::cos(5 * PI / 6), y3 = R_out * std::sin(5 * PI / 6);
     const double x4 = R_out * std::cos(7 * PI / 6), y4 = R_out * std::sin(7 * PI / 6);
     const double x5 = R_out * std::cos(3 * PI / 2), y5 = R_out * std::sin(3 * PI / 2);
@@ -560,7 +560,7 @@ void CKompasBuilder::CreateBoltGOST7796(const std::vector<double>& halfCouplingD
     pSketchDef3->SetPlane(m_part->GetDefaultEntity(o3d_planeXOZ));
     pSketch3->Create();
     p2DDoc = pSketchDef3->BeginEdit();
-    p2DDoc->ksCircle(0, 0, dBolt / 2.0, 1);
+    p2DDoc->ksCircle(0, 0, hole / 2.0, 1);
     pSketchDef3->EndEdit();
 
     ksEntityPtr pExtrude3 = m_part->NewEntity(o3d_bossExtrusion);
@@ -570,8 +570,9 @@ void CKompasBuilder::CreateBoltGOST7796(const std::vector<double>& halfCouplingD
     pExtrudeDef3->SetSideParam(true, etBlind, khwl, 0, false);
     pExtrude3->Create();
 
-    m_doc->SaveAs(L"C:\\Temp\\Болт_ГОСТ7796.m3d");
+    m_doc->SaveAs(L"C:\\\\Temp\\\\Болт_ГОСТ7796.m3d");
 }
+
 
 void CKompasBuilder::CreateShaybaGOST6402(const std::vector<double>& halfCouplingData)
 {
@@ -670,6 +671,7 @@ void CKompasBuilder::CreateShaybaGOST6402(const std::vector<double>& halfCouplin
     // Сохранение
     m_doc->SaveAs(L"C:\\Temp\\Шайба_ГОСТ6402.m3d");
 }
+
 void CKompasBuilder::CreateSborka()
 {
     m_doc = m_app->Document3D();
