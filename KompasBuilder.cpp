@@ -315,7 +315,6 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
             break;
         }
     }
-    m_part->Update();
 
     // ========== МАРКЕРЫ ОТВЕРСТИЙ ==========
     for (int i = 0; i < allFaces->GetCount(); i++) {
@@ -338,6 +337,87 @@ void CKompasBuilder::CreatePoluMufta(const std::vector<double>& dh)
             face->Update();
         }
     }
+
+    // ========== МАРКЕРЫ ТОРЦОВ (ПЕРЕД/ЗАД) ==========
+    // Сначала получаем все плоские грани
+    std::vector<ksEntityPtr> planarFaces;
+    for (int i = 0; i < allFaces->GetCount(); i++)
+    {
+        ksEntityPtr face = allFaces->GetByIndex(i);
+        if (!face) continue;
+        ksFaceDefinitionPtr fdef = face->GetDefinition();
+        if (!fdef || !fdef->IsPlanar()) continue;
+
+        ksSurfacePtr surf = fdef->GetSurface();
+        if (!surf || !surf->IsPlane()) continue;
+
+        IDispatchPtr surfParamDisp = surf->GetSurfaceParam();
+        if (!surfParamDisp) continue;
+        ksPlaneParamPtr planeParam(surfParamDisp);
+        if (!planeParam) continue;
+        ksPlacementPtr plc = planeParam->GetPlacement();
+        if (!plc) continue;
+
+        double ox = 0, oy = 0, oz = 0;
+        if (!plc->GetOrigin(&ox, &oy, &oz)) continue;
+
+        planarFaces.push_back(face);
+    }
+
+    // Маркируем FrontFace (торец при X ≈ 0)
+    for (size_t i = 0; i < planarFaces.size(); i++)
+    {
+        ksEntityPtr face = planarFaces[i];
+        ksFaceDefinitionPtr fdef = face->GetDefinition();
+        ksSurfacePtr surf = fdef->GetSurface();
+        IDispatchPtr surfParamDisp = surf->GetSurfaceParam();
+        ksPlaneParamPtr planeParam(surfParamDisp);
+        ksPlacementPtr plc = planeParam->GetPlacement();
+
+        double ox = 0, oy = 0, oz = 0;
+        plc->GetOrigin(&ox, &oy, &oz);
+
+        // Проверяем, что нормаль направлена вдоль оси X
+        double nx, ny, nz;
+        double uMid = 0.5 * (surf->GetParamUMin() + surf->GetParamUMax());
+        double vMid = 0.5 * (surf->GetParamVMin() + surf->GetParamVMax());
+        surf->GetNormal(uMid, vMid, &nx, &ny, &nz);
+
+        if (fabs(ox) < 0.1 && fabs(nx) > 0.9)
+        {
+            face->Putname(L"HalfCoupling_FrontFace");
+            face->Update();
+            break;
+        }
+    }
+
+    // Маркируем BackFace (торец при X ≈ l)
+    for (size_t i = 0; i < planarFaces.size(); i++)
+    {
+        ksEntityPtr face = planarFaces[i];
+        ksFaceDefinitionPtr fdef = face->GetDefinition();
+        ksSurfacePtr surf = fdef->GetSurface();
+        IDispatchPtr surfParamDisp = surf->GetSurfaceParam();
+        ksPlaneParamPtr planeParam(surfParamDisp);
+        ksPlacementPtr plc = planeParam->GetPlacement();
+
+        double ox = 0, oy = 0, oz = 0;
+        plc->GetOrigin(&ox, &oy, &oz);
+
+        // Проверяем, что нормаль направлена вдоль оси X
+        double nx, ny, nz;
+        double uMid = 0.5 * (surf->GetParamUMin() + surf->GetParamUMax());
+        double vMid = 0.5 * (surf->GetParamVMin() + surf->GetParamVMax());
+        surf->GetNormal(uMid, vMid, &nx, &ny, &nz);
+
+        if (fabs(ox - l1) < 0.1 && fabs(nx) > 0.9)
+        {
+            face->Putname(L"HalfCoupling_BackFace");
+            face->Update();
+            break;
+        }
+    }
+
 
     m_part->Update();
     m_doc->SaveAs(L"C:\\\\Temp\\\\Полумуфта.m3d");
@@ -425,46 +505,64 @@ void CKompasBuilder::CreateGaykaGOST15521(const std::vector<double>& dh, const C
         }
     }
 
-    int torceCount = 0;
+    // Маркеры торцевых граней гайки: две шестигранные "крышки" (левая/правая).
+    // Торцы лежат в плоскости ZOX => их координата Y равна минимуму/максимуму по всем вершинам детали.
+    // В разных версиях Kompas6API5 набор методов ksPlacement отличается (например, нет GetAxisX/Y/Z),
+    // поэтому для надёжности определяем торцы через global minY/maxY по вершинам.
 
-    // Первый проход - ищем первую торцевую грань
-    for (long i = 0; i < count; i++)
+    // 1) Находим global minY/maxY по всем вершинам детали.
+    double vMinY = 1e100, vMaxY = -1e100;
     {
-        ksEntityPtr face = allFaces->GetByIndex(i);
-        if (!face) continue;
-        ksFaceDefinitionPtr def = face->GetDefinition();
-        if (!def) continue;
-
-        if (def->IsPlanar() && !def->IsCylinder())
+        ksEntityCollectionPtr verts = m_part->EntityCollection(o3d_vertex);
+        if (verts)
         {
-            face->Putname(L"Gayka_LeftSide");
-            face->Update();
-            torceCount = 1;
-            break;
-        }
-    }
-
-    // Второй проход - ищем вторую торцевую грань
-    for (long i = 0; i < count; i++)
-    {
-        ksEntityPtr face = allFaces->GetByIndex(i);
-        if (!face) continue;
-        ksFaceDefinitionPtr def = face->GetDefinition();
-        if (!def) continue;
-
-        if (def->IsPlanar() && !def->IsCylinder())
-        {
-            BSTR name = face->Getname();
-
-            if (name == NULL || wcslen(name) == 0) // Если имя пустое - это вторая грань
+            const long vCount = verts->GetCount();
+            for (long vi = 0; vi < vCount; ++vi)
             {
-                face->Putname(L"Gayka_RightSide");
-                face->Update();
-                torceCount = 2;
-                break;
+                ksEntityPtr vEnt = verts->GetByIndex(vi);
+                if (!vEnt) continue;
+                ksVertexDefinitionPtr vDef = vEnt->GetDefinition();
+                if (!vDef) continue;
+                double x = 0, y = 0, z = 0;
+                vDef->GetPoint(&x, &y, &z);
+                if (y < vMinY) vMinY = y;
+                if (y > vMaxY) vMaxY = y;
             }
         }
     }
+
+    // 2) Ищем среди плоских граней те, чья плоскость находится на vMinY / vMaxY.
+    ksEntityPtr leftFace = nullptr;
+    ksEntityPtr rightFace = nullptr;
+    const double epsY = 1e-3; // мм: достаточно жёстко, чтобы не цеплять боковины
+
+    for (long i = 0; i < count; i++)
+    {
+        ksEntityPtr face = allFaces->GetByIndex(i);
+        if (!face) continue;
+        ksFaceDefinitionPtr fdef = face->GetDefinition();
+        if (!fdef || !fdef->IsPlanar()) continue;
+
+        ksSurfacePtr surf = fdef->GetSurface();
+        if (!surf || !surf->IsPlane()) continue;
+        IDispatchPtr surfParamDisp = surf->GetSurfaceParam();
+        if (!surfParamDisp) continue;
+        ksPlaneParamPtr planeParam(surfParamDisp);
+        if (!planeParam) continue;
+        ksPlacementPtr plc = planeParam->GetPlacement();
+        if (!plc) continue;
+
+        double ox = 0, oy = 0, oz = 0;
+        if (!plc->GetOrigin(&ox, &oy, &oz)) continue;
+
+        if (!leftFace && fabs(oy - vMinY) < epsY)  leftFace = face;
+        if (!rightFace && fabs(oy - vMaxY) < epsY) rightFace = face;
+        if (leftFace && rightFace) break;
+    }
+
+    // Имена маркеров: leftside (как в исходном проекте) + rightside на противоположную грань.
+    if (leftFace)  { leftFace->Putname(L"Gayka_LeftSide");  leftFace->Update(); }
+    if (rightFace) { rightFace->Putname(L"Gayka_RightSide"); rightFace->Update(); }
 
     m_doc->SaveAs(L"C:\\Temp\\Гайка_ГОСТ15521.m3d");
 }
@@ -817,15 +915,108 @@ void CKompasBuilder::CreateSborka()
     m_doc->Create(false, false);
     m_part = m_doc->GetPart(pTop_Part);
 
-    m_doc->SetPartFromFile(L"C:\\Temp\\Полумуфта.m3d", m_part, true);
-    m_doc->SetPartFromFile(L"C:\\Temp\\Полумуфта.m3d", m_part, true);
-    m_doc->SetPartFromFile(L"C:\\Temp\\Болт_ГОСТ7817.m3d", m_part, true);
-    m_doc->SetPartFromFile(L"C:\\Temp\\Болт_ГОСТ7796.m3d", m_part, true);
-    m_doc->SetPartFromFile(L"C:\\Temp\\Гайка_ГОСТ15521.m3d", m_part, true);
-    m_doc->SetPartFromFile(L"C:\\Temp\\Гайка_ГОСТ15521.m3d", m_part, true);
-    m_doc->SetPartFromFile(L"C:\\Temp\\Шайба_ГОСТ6402.m3d", m_part, true);
-    m_doc->SetPartFromFile(L"C:\\Temp\\Шайба_ГОСТ6402.m3d", m_part, true);
+    // Загружаем компоненты
+    m_doc->SetPartFromFile(L"C:\\Temp\\Полумуфта.m3d", m_part, true);  // Полумуфта 1 (0)
+    m_doc->SetPartFromFile(L"C:\\Temp\\Полумуфта.m3d", m_part, true);  // Полумуфта 2 (1)
+    m_doc->SetPartFromFile(L"C:\\Temp\\Болт_ГОСТ7796.m3d", m_part, true);  // Болт 7796 (2)
+    m_doc->SetPartFromFile(L"C:\\Temp\\Болт_ГОСТ7817.m3d", m_part, true);   // Болт 7817 (3)
+    m_doc->SetPartFromFile(L"C:\\Temp\\Шайба_ГОСТ6402.m3d", m_part, true);  // Шайба 1 (4) для болта 7796
+    m_doc->SetPartFromFile(L"C:\\Temp\\Гайка_ГОСТ15521.m3d", m_part, true);  // Гайка 1 (5) для болта 7796
+    m_doc->SetPartFromFile(L"C:\\Temp\\Шайба_ГОСТ6402.m3d", m_part, true);  // Шайба 2 (6) для болта 7817
+    m_doc->SetPartFromFile(L"C:\\Temp\\Гайка_ГОСТ15521.m3d", m_part, true);  // Гайка 2 (7) для болта 7817
 
-    m_part->Update();
+    // Получаем указатели на экземпляры
+    ksPartPtr pPolumufta1 = m_doc->GetPart(0);
+    ksPartPtr pPolumufta2 = m_doc->GetPart(1);
+    ksPartPtr pBolt7796 = m_doc->GetPart(2);
+    ksPartPtr pBolt7817 = m_doc->GetPart(3);
+    ksPartPtr pShayba1 = m_doc->GetPart(4);
+    ksPartPtr pGayka1 = m_doc->GetPart(5);
+    ksPartPtr pShayba2 = m_doc->GetPart(6);
+    ksPartPtr pGayka2 = m_doc->GetPart(7);
+
+    // Получаем коллекции граней
+    ksEntityCollectionPtr colPolumufta1 = pPolumufta1->EntityCollection(o3d_face);
+    ksEntityCollectionPtr colPolumufta2 = pPolumufta2->EntityCollection(o3d_face);
+    ksEntityCollectionPtr colBolt7796 = pBolt7796->EntityCollection(o3d_face);
+    ksEntityCollectionPtr colBolt7817 = pBolt7817->EntityCollection(o3d_face);
+    ksEntityCollectionPtr colShayba1 = pShayba1->EntityCollection(o3d_face);
+    ksEntityCollectionPtr colGayka1 = pGayka1->EntityCollection(o3d_face);
+    ksEntityCollectionPtr colShayba2 = pShayba2->EntityCollection(o3d_face);
+    ksEntityCollectionPtr colGayka2 = pGayka2->EntityCollection(o3d_face);
+
+    // Грани первой полумуфты
+    ksEntityPtr Polumufta1_Hole_GOST7796 = colPolumufta1->GetByName(L"Hole_GOST7796", true, true);
+    ksEntityPtr Polumufta1_Hole_GOST7817 = colPolumufta1->GetByName(L"Hole_GOST7817", true, true);
+    ksEntityPtr Polumufta1_FrontFace = colPolumufta1->GetByName(L"HalfCoupling_FrontFace", true, true);
+    ksEntityPtr Polumufta1_BackFace = colPolumufta1->GetByName(L"HalfCoupling_BackFace", true, true);
+    ksEntityPtr Polumufta1_CentralHole = colPolumufta1->GetByName(L"CentralHole", true, true);
+
+    // Грани второй полумуфты (исправлено: используем colPolumufta2)
+    ksEntityPtr Polumufta2_Hole_GOST7796 = colPolumufta2->GetByName(L"Hole_GOST7796", true, true);
+    ksEntityPtr Polumufta2_Hole_GOST7817 = colPolumufta2->GetByName(L"Hole_GOST7817", true, true);
+    ksEntityPtr Polumufta2_FrontFace = colPolumufta2->GetByName(L"HalfCoupling_FrontFace", true, true);
+    ksEntityPtr Polumufta2_BackFace = colPolumufta2->GetByName(L"HalfCoupling_BackFace", true, true);
+    ksEntityPtr Polumufta2_CentralHole = colPolumufta2->GetByName(L"CentralHole", true, true);
+
+    // Грани болта 7796
+    ksEntityPtr Bolt7796_Shaft = colBolt7796->GetByName(L"Bolt7796_Shaft", true, true);
+    ksEntityPtr Bolt7796_Head = colBolt7796->GetByName(L"Bolt7796_Head", true, true);
+
+    // Грани болта 7817
+    ksEntityPtr Bolt7817_Shaft = colBolt7817->GetByName(L"Bolt7817_Shaft", true, true);
+    ksEntityPtr Bolt7817_Head = colBolt7817->GetByName(L"Bolt7817_Head", true, true);
+
+    // Грани шайбы 1
+    ksEntityPtr Shayba1_HoleFace = colShayba1->GetByName(L"HoleFace", true, true);
+    ksEntityPtr Shayba1_LeftSide = colShayba1->GetByName(L"Shayba_LeftSide", true, true);
+    ksEntityPtr Shayba1_RightSide = colShayba1->GetByName(L"Shayba_RightSide", true, true);
+
+    // Грани гайки 1
+    ksEntityPtr Gayka1_HoleFace = colGayka1->GetByName(L"HoleFace", true, true);
+    ksEntityPtr Gayka1_RightSide = colGayka1->GetByName(L"Gayka_RightSide", true, true);
+
+    // Грани шайбы 2
+    ksEntityPtr Shayba2_HoleFace = colShayba2->GetByName(L"HoleFace", true, true);
+    ksEntityPtr Shayba2_LeftSide = colShayba2->GetByName(L"Shayba_LeftSide", true, true);
+    ksEntityPtr Shayba2_RightSide = colShayba2->GetByName(L"Shayba_RightSide", true, true);
+
+    // Грани гайки 2
+    ksEntityPtr Gayka2_HoleFace = colGayka2->GetByName(L"HoleFace", true, true);
+    ksEntityPtr Gayka2_RightSide = colGayka2->GetByName(L"Gayka_RightSide", true, true);
+
+    // Соединяем полумуфты 
+    m_doc->AddMateConstraint(mc_Coincidence, Polumufta1_FrontFace, Polumufta2_FrontFace, -1, 1, 0);
+    m_doc->AddMateConstraint(mc_Concentric, Polumufta1_CentralHole, Polumufta2_CentralHole, 1, 1, 0);
+
+    // Соосность отверстий под болты между полумуфтами
+    m_doc->AddMateConstraint(mc_Concentric, Polumufta1_Hole_GOST7796, Polumufta2_Hole_GOST7796, 1, 1, 0);
+    m_doc->AddMateConstraint(mc_Concentric, Polumufta1_Hole_GOST7817, Polumufta2_Hole_GOST7817, 1, 1, 0);
+
+    // ===== Болт 7796 =====
+    m_doc->AddMateConstraint(mc_Coincidence, Bolt7796_Head, Polumufta1_BackFace, -1, 1, 0);
+    m_doc->AddMateConstraint(mc_Concentric, Bolt7796_Shaft, Polumufta1_Hole_GOST7796, 1, 1, 0);
+
+    // Шайба 1: одевается на болт со стороны второй полумуфты
+    m_doc->AddMateConstraint(mc_Concentric, Shayba1_HoleFace, Polumufta2_Hole_GOST7796, 1, 1, 0);
+    m_doc->AddMateConstraint(mc_Distance, Shayba1_LeftSide, Polumufta2_BackFace, 1, 1, -1.6);
+
+    // Гайка 1: накручивается на болт, прилегает к шайбе
+    m_doc->AddMateConstraint(mc_Concentric, Gayka1_HoleFace, Polumufta2_Hole_GOST7796, 1, 1, 0);
+    m_doc->AddMateConstraint(mc_Distance, Gayka1_RightSide, Polumufta2_BackFace, 1, 1, -5);
+
+    // ===== Болт 7817 =====
+    m_doc->AddMateConstraint(mc_Coincidence, Bolt7817_Head, Polumufta1_BackFace, -1, 1, 0);
+    m_doc->AddMateConstraint(mc_Concentric, Bolt7817_Shaft, Polumufta1_Hole_GOST7817, 1, 1, 0);
+
+    // Шайба 2: одевается на болт со стороны второй полумуфты
+    m_doc->AddMateConstraint(mc_Concentric, Shayba2_HoleFace, Polumufta2_Hole_GOST7817, 1, 1, 0);
+    m_doc->AddMateConstraint(mc_Distance, Shayba2_LeftSide, Polumufta2_BackFace, 1, 1, -1.6);
+
+    // Гайка 2: накручивается на болт, прилегает к шайбе
+    m_doc->AddMateConstraint(mc_Concentric, Gayka2_HoleFace, Polumufta2_Hole_GOST7817, 1, 1, 0);
+    m_doc->AddMateConstraint(mc_Distance, Gayka2_RightSide, Polumufta2_BackFace, 1, 1, -5);
+
+    m_doc->RebuildDocument();
     m_doc->SaveAs(L"C:\\Temp\\Сборка.m3d");
 }
